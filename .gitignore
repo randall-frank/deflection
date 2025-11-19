@@ -1,14 +1,9 @@
 merlin*/
 ciderpres*/
 bin/START*
+bin/GAME*
 bin/GUNCODE*
 bin/LASER.DRAW*
 bin/_*
-DIAFLW.SYSTEM#ff2000
-DIAFLW_Release.2mg
+/*.2mg
 .vscode/
-/src/HELP.S
-_Fileinformation.txt
-SYSTEM/DIAFLW.DOCS#040000
-SYSTEM/READ.DOCS#ff0000
-/src/check.S

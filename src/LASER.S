@@ -2,7 +2,6 @@
         DSK   ../bin/LASER.DRAW#069000
         TYP   $06  ; /BIN file
 
-COLORFLAG = $90FC
 HIGHS = $9500
 LOWS = $9400
 XLOC = 0
@@ -107,11 +106,16 @@ HOLDER DFB 0
 SCREEN DFB 0
 TEMP0 DFB 0
 TEMP1 DFB 0
- DS 48
- HEX 010004000600
- DS 6
- DFB 0
- JMP PAGE
+        DS 48
+        HEX 010004000600
+        DS 6
+COLORFLAG DFB 0
+
+* super dangerous here. This is set up so that 'CUT' is $9100 and COLORFLAG is $90FC
+* do not break this!!!!  
+
+        JMP PAGE
+
 CUT LDA NUM1
  LDY #0
  STY PTR1

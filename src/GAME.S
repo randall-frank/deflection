@@ -252,28 +252,31 @@ ANAL    LDA #0
         STA PLAY1
         STA PLAY2
 
-        ORG $4000
-        
-HIGH = $4200
-LO = $4300
-THRES = $200
-SLOT = $201
-COUNTER = 2
-FLAGOLD = 3
-FLAG = 4
-SCALETABLE = $4500
+        LDY #100
+SCANLOOP        
+        LDA BOARDBASE,Y
+        CMP #$0D
+        BNE NOT0D
+        INC PLAY1
+NOT0D   CMP #$8D
+        BNE NOT1D
+        INC PLAY2
+NOT1D   DEY
+        BPL SCANLOOP
+        RTS
 
-********************
-* OUTPUT:6,7=LO,HI OF MAX
-********************
-        LDA #0
-        STA COUNTER
-        STA FLAG
-        STA FLAGOLD
-        LDA #$C0
-        STA 1
-        LDA SLOT
-3       LDY #101
+FL      DFB 0
+XSEL    DFB 0
+YSEL    DFB 0
+ZSEL    DFB 0
+
+PLAYIT  LDY #101
+PL10    LDA BOARDBASE,Y
+        STA BOARDSAVE,Y
+        DEY
+        BPL PL10
+        JMP PLAYIT2
+PLAYIT3 LDY #101
 PL12    LDA BOARDSAVE,Y
         STA BOARDBASE,Y
         DEY
