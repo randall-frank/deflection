@@ -1,0 +1,8 @@
+- Create build process and build ProDOS .2mg file
+- Improve README
+- Add help
+- Enable keyboard only mode
+- Restrict cursor motion (show valid placements)
+- Rework display, names, copyright, use lower case, etc
+- itch.io integration
+- can't rotate 'key' squares
