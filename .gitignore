@@ -4,6 +4,7 @@ bin/START*
 bin/GAME*
 bin/GUNCODE*
 bin/LASER.DRAW*
+bin/OLDFONT*
 bin/_*
 /*.2mg
 .vscode/

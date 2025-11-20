@@ -14,6 +14,8 @@ BOARDBASE = $9200
 BOARDSAVE = BOARDBASE+128
 BUTTON0 = $C061
 BUTTON1 = $C062
+SPKR = $C030 
+WAIT = $FCA8
 
         JMP START
 
@@ -119,6 +121,7 @@ PLAYER  DFB 0
 XP      DFB 0
 YP      DFB 0
 Z       DFB 0
+
 GETZ    LDA #0
         LDX YP
 G1      DEX
@@ -185,7 +188,7 @@ S2      LDA $7A00,Y
         LDA #22
         LDX #11
         JSR DRAWSTR
-        JSR ANAL
+        JSR RECOUNT
         LDA PLAY1
         ORA #$30
         STA BLOCKS
@@ -201,7 +204,7 @@ S2      LDA $7A00,Y
 GAME2   JSR DSCREEN
         JSR PLAYIT
         JSR CLEAROUT
-        JSR ANAL
+        JSR RECOUNT
         LDA PLAY1
         ORA #$30
         STA BLOCKS
@@ -245,10 +248,10 @@ EOG1    LDA $C000
         STA $C010
         JMP GAME1
 
-PLAY1   DFB 0
-PLAY2   DFB 0
+PLAY1   DFB 0  ; Number of blocks for player 1
+PLAY2   DFB 0  ; Number of blocks for player 2
 
-ANAL    LDA #0
+RECOUNT LDA #0
         STA PLAY1
         STA PLAY2
 
@@ -516,11 +519,11 @@ EM2     LDA 1
 EM3     JSR RAY
 EMNO    RTS
 
-TTBL DFB 0,0,0,1,2,3,7,6,5
-XT DFB 0
-YT DFB 0
-DX DFB 0
-DY DFB 0
+TTBL    DFB 0,0,0,1,2,3,7,6,5
+XT      DFB 0
+YT      DFB 0
+DX      DFB 0
+DY      DFB 0
 TESTCOUNT DFB 0
 
 TESTMOVE 
@@ -656,18 +659,122 @@ PLACE   LDA $FFFF
 QQQ     DFB 0
 QQ2     DFB 0
 QQ1     DFB 0
-STRTBL  ASC 'deflection'
+
+STRTBL  ASC 'Deflection'
         asc '          '
-        ASC 'written by'
-        ASC ' rj frank '
-        asc ' player 1 '
-        asc ' player 2 '
-BL      asc ' blocks:0 '
-        asc ' <select> '
-        asc ' <rotate> '
-        asc 'game over '
-        asc 'copyright '
-        asc ' (c) 1987 '
-        ASC '  winner  '
-        asc '  loser   '
+        ASC 'Written by'
+        ASC ' RJ Frank '
+        asc ' Player 1 '
+        asc ' Player 2 '
+BL      asc ' Blocks:0 '
+        asc ' <Select> '
+        asc ' <Rotate> '
+        asc 'Game Over '
+        asc 'Copyright '
+        asc ' (C) 1987 '
+        ASC '  Winner  '
+        asc '  Loser   '
 BLOCKS = BL+8
+
+* Sound in the X register [0,15]
+* Routine from Assembly Cookbook for the Apple II/IIe (Don Lancaster)
+*  Chapter 4: Obnoxious Sounds
+
+SOUND    
+        PHP 
+        PHA 
+        TYA 
+        PHA 
+        TXA 
+        CMP FLNGTH4 
+        BCC LOK4 
+        LDA #$00 
+LOK4
+        ASL 
+        TAX 
+        LDA SEFO,X 
+        STA TRPCNT4 
+        INX 
+        LDA SEFO,X 
+        STA SWEEP4+1 
+SWEEP4 
+        LDY #$00 
+NXTSWP4 
+        TYA 
+        TAX 
+NXTCYC4
+        TYA 
+        JSR WAIT 
+        BIT SPKR 
+        CPX #$80 
+        BEQ EXIT4 
+        DEX 
+        BNE NXTCYC4 
+        DEY 
+        BNE NXTSWP4 
+        DEC TRPCNT4 
+        BNE SWEEP4
+EXIT4 
+        PLA 
+        TAY 
+        PLA 
+        PLP 
+        RTS
+
+TRPCNT4 DFB $01
+FLNGTH4 DFB $10
+         ; Table for sounds that start at '5'
+SEFO    DFB $01,$08 ; Tick
+SEF1    DFB $01,$18 ; Whopidoop
+SEF2    DFB $ff,$01 ; Pip
+SEF3    DFB $06,$10 ; Phasor
+SEF4    DFB $01,$30 ; Music scale (long)
+SEF5    DFB $20,$06 ; Short beep
+SEF6    DFB $70,$06 ; Medium beep
+SEF7    DFB $ff,$06 ; Long beep
+SEF8    DFB $01,$a0 ; Geiger (longish)
+SEF9    DFB $ff,$02 ; Gleep (quick)
+SEF10   DFB $04,$1c ; Glissade (woop,woop,woop,woop)
+SEFll   DFB $01,$10 ; Qwip
+SEF12   DFB $30,$0b ; Oboe (warble?  laser)
+SEF13   DFB $30,$07 ; French horn (fail buzzer?)
+SEF14   DFB $01,$15 ; Pass beep
+SEF15   DFB $01,$64 ; Time bomb
+
+RANDOM_SETUP 
+        LDA $4E          ; Seed the random number generator
+        STA R1           ; based on delay between keypresses
+        STA R3
+        LDA $4F
+        STA R2
+        STA R4
+        LDX #$20         ; Generate a few random numbers
+RNDLOOP JSR RANDOM       ; to kick things off
+        DEX
+        BNE RNDLOOP
+        RTS
+
+R1      DFB 0
+R2      DFB 0
+R3      DFB 0
+R4      DFB 0
+
+* return a random byte 
+
+RANDOM  ROR R4           ; Bit 25 to carry
+        LDA R3           ; Shift left 8 bits
+        STA R4
+        LDA R2
+        STA R3
+        LDA R1
+        STA R2
+        LDA R4           ; Get original bits 17-24
+        ROR              ; Now bits 18-25 in ACC
+        ROL R1           ; R1 holds bits 1-7
+        EOR R1           ; Seven bits at once
+        ROR R4           ; Shift right by one bit
+        ROR R3
+        ROR R2
+        ROR
+        STA R1
+        RTS

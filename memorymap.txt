@@ -15,19 +15,12 @@ LASER.SHAPES - @ 8000 - game icons ($fff bytes)
 7F00 - DYTBL (100 bytes) - TBLD
 8000 - LASER.SHAPES - icons (editor with ICONEDIT.abas)
 9000 - LASER.DRAW - icon drawing code (LASER.S)
-90FC - COLORFLAG???
+90FC - COLORFLAG - dangerous 
 
-9200 - BOARDBASE current play board
+9200 - BOARDBASE current play board from START.S
 9280 - BOARDSAVE saved board...
 
-
-LASER.DRAW A$9000,L$700
-LASER.DRAW A$9100,L$600
-LASER.DRAW A$9200,L$500
-LASER.DRAW A$9300,L$400
-
-BINARY bits... (was in LASER.DRAW!!!)
-9300 - DIRBASE????
+9300 - DIRBASE - from GFXTABLES
 9400 - LOWS - table of scanline Y starts LO
 9500 - HIGHS - table of scanline Y starts HI
 
