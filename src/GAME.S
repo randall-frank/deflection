@@ -661,19 +661,23 @@ QQ2     DFB 0
 QQ1     DFB 0
 
 STRTBL  ASC 'Deflection'
+        ASC '          '
+        asc 'Ver: '
+        PUT VERSION.S
         asc '          '
-        ASC 'Written by'
-        ASC ' RJ Frank '
         asc ' Player 1 '
         asc ' Player 2 '
 BL      asc ' Blocks:0 '
         asc ' <Select> '
         asc ' <Rotate> '
         asc 'Game Over '
-        asc 'Copyright '
-        asc ' (C) 1987 '
+        asc ' '
+        hex  13
+        asc    ' 1987  '
+        ASC ' R. Frank '
         ASC '  Winner  '
         asc '  Loser   '
+
 BLOCKS = BL+8
 
 * Sound in the X register [0,15]

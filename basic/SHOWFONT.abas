@@ -1,0 +1,41 @@
+10 lomem: 6*4096
+20 print chr$(4);"BLOAD GFXTABLES,A$3F00"
+30 print chr$(4);"BLOAD FONT,A$5000"
+35 hgr
+40 LO = 4*4096
+50 HI = LO + 256
+60 BA = 5*4096
+65 dim HE(16)
+66 for I=0 to 15
+67 read HE(I)
+68 next I
+69 data 48,49,50,51,52,53,54,55,56,57,65,66,67,68,69,70
+70 gosub 500
+75 C = 0
+80 for Y=2 to 16 step 2
+90 for X=5 to 32+3 step 2
+100 gosub 1000
+110 C = C + 1
+120 next X
+130 next Y
+140 end
+500 rem decorate the axes
+510 for I=0 to 15
+520 Y = 0
+530 X = I*2 + 5
+540 C = HE(I)
+550 gosub 1000
+560 next I
+570 for I=0 to 7
+580 X = 0
+590 Y = I*2 + 2
+600 C = HE(I)
+610 gosub 1000
+620 next I
+630 return
+1000 rem draw char C at X,Y
+1010 for J=0 to 7
+1020 AD = peek(LO+(Y*8)+J) + (peek(HI+(Y*8)+J)*256) + X
+1030 poke AD, peek(BA + (8*C) + J)
+1040 next J
+1050 return

@@ -24,13 +24,22 @@ if not prerequisites:
     sys.exit(1)
 
 # Set the version number and start the build process
+# Must be 5 characters
 version = "0.1.0"
+
+# Burn the version number into the source file VERSION.S 
+log.info("Generating 6502 source code...")
+with open(os.path.join("src","VERSION.S"), "w") as out:
+    text = f"        ASC '{version}'\n"
+    out.write(text)
+
 
 files = {
     "START.S": 0x9200,
     "GUNCODE.S": 0x7B00,
     "LASER.S": 0x9000,
     "GAME.S": 0x6000,
+    "LOADER.S": 0x2000,
 }
 
 log.info("Assembling 6502 source code...")
@@ -49,6 +58,37 @@ for name, address in files.items():
         log.error(f"assembling: {name}: {result.stdout}")
         sys.exit(1)
 os.chdir(orig_dir)
+
+log.info("Building DEFLECT.SYSTEM(SYS#ff) file...")
+# Build 'DEFLECT.SYSTEM,TSYS' from bins
+# Currently 3B00 bytes long
+data = bytearray(0x3b00)
+
+for raw in os.listdir("bin"):
+    if raw.startswith("_"):
+        continue
+    if raw.startswith("OLD"):
+        continue
+    # Get all the files in the bin directory except _Fileinformation.txt
+    # and any file starting with "OLD".  Filenames end in NAPS notation,
+    # so we can get the A$ value from #06YYYY  
+    name = raw.split("#")[0]
+    addr = int(raw.split("#")[1][2:],16)
+    if name.startswith("LOADER"):
+        offset = 0
+    else:
+        offset = addr - (0x6000 - 0x2400) - 0x2000
+    log.info(f"Loading {name} at ${addr:04X} (${offset:04X})")
+    with open(os.path.join("bin", raw), "rb") as f:
+        local = bytearray(f.read())
+    length = len(local)
+    data[offset:offset+length] = local
+
+outname = os.path.join("SYSTEM","DEFLECT.SYSTEM#ff2000")
+with open(outname, "wb") as fp:
+    fp.write(data)
+log.info(f"Wrote system file: {outname}")
+
 
 log.info("Building .2mg disk image...")
 # Create a release .2mg image
