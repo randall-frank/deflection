@@ -1,8 +1,4 @@
 
-* from LASER.S
-COLORFLAG = $90FC
-DSCREEN = $90FD
-
 * Tables from GFXTABLES
 HIGH = $9500
 LO = $9400
@@ -16,7 +12,11 @@ DYTBL = $7F00
 RAY = $7B00
 
 * from LASER.S
+* dispatch table at start of unit
 LASER = $9000
+CUT = $9003         ; was $9100
+DSCREEN = $9006     ; was $90FD (page)
+COLORFLAG = $9009   ; was $90FC 
 
 * Kind of from START.S
 BOARDBASE = $9200

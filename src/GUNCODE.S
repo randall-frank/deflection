@@ -2,18 +2,14 @@
         DSK   ../bin/GUNCODE#067B00
         TYP   $06  ; /BIN file
 
-HPLOT = $F45A
-HPOSN = $F411
-HCOLOR = $F6F0
-DXTBL = $7E00
-DYTBL = $7F00
-DIRBASE = $9300
-BOARDBASE = $9200
+        PUT COMMON.S
+
 XIN = 0
 YIN = 1
 DIN = 2
 
         JMP STARTUP
+        
 MULT    LDA #0
         STY MULTY
 MULT1   DEX
@@ -225,7 +221,7 @@ H11     CMP #30
         STA 5
         LDA #63
         STA 2
-        JSR $9000
+        JSR LASER
         RTS
 H2      LDA #7
         STA X2

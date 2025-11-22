@@ -2,8 +2,8 @@
         DSK   ../bin/LASER.DRAW#069000
         TYP   $06  ; /BIN file
 
-HIGH = $9500
-LO = $9400
+        PUT  COMMON.S
+
 XLOC = 0
 YLOC = 1
 NUM1 = 2
@@ -14,6 +14,18 @@ PTR1 = 6
 PTR2 = 8
 BASE = $26
 
+* NOTE: This unit is getting close to the DIRBASE table.  When adding code
+* make sure this ends by $9300 or move the DIRBASE table
+
+* Use a dispatch table instead of forcibly aligned addresses
+
+        JMP LOCAL_LASER     ; was $9000
+        JMP LOCAL_CUT       ; was $9100
+        JMP LOCAL_DSCREEN   ; was $90FD
+
+LOCAL_COLORFLAG DFB 0       ; was $90FC
+
+LOCAL_LASER
         LDA YLOC
         STA YSTART
         LDA XLOC
@@ -109,14 +121,9 @@ TEMP1   DFB 0
         DS 48
         HEX 010004000600
         DS 6
-COLORFLAG DFB 0
 
-* super dangerous here. This is set up so that 'CUT' is $9100 and COLORFLAG is $90FC
-* do not break this!!!!  
-
-        JMP PAGE
-
-CUT     LDA NUM1
+LOCAL_CUT     
+        LDA NUM1
         LDY #0
         STY PTR1
         LSR
@@ -147,7 +154,9 @@ LL1     INY
         CMP #19
         BNE LL2
         RTS
-PAGE    LDA #0
+
+LOCAL_DSCREEN 
+        LDA #0
         STA XLOC
         LDA #0
         STA YLOC
@@ -203,7 +212,7 @@ DIGG    LDA #1
         LDA 2
         AND #$7F
         STA 2
-DIFF2   JSR $9000
+DIFF2   JSR LASER
         INC XLOC
         LDA XLOC
         CMP #10

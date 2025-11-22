@@ -3,42 +3,36 @@
         TYP   $06  ; /BIN file
         LST OFF
 
-COLORFLAG = $90FC
-HIGH = $9500
-LO = $9400
+        PUT COMMON.S
+
 KP0 = $1C
 KP1 = KP0+1
-DSCREEN = $90FD
-RAY = $7B00
-BOARDBASE = $9200
-BOARDSAVE = BOARDBASE+128
-BUTTON0 = $C061
-BUTTON1 = $C062
-SPKR = $C030 
-WAIT = $FCA8
 
         JMP START
 
-CALC    LDA LO,X
+CALC    LDA LO,X     ; set up $26,$27 to scanline in X register
         STA $26
         LDA HIGH,X
         STA $27
         RTS
-SELECT  JSR CLEAROUT
+
+SELECT  JSR CLEAROUT ; Display the mode is "select"
         LDA #9
         LDX #7
-        LDY PLAYER
+        LDY PLAYER   ; Player 1 or 2
         BPL SELECT1
         LDA #16
 SELECT1 JMP DRAWSTR
-ROTATE  JSR CLEAROUT
+
+ROTATE  JSR CLEAROUT ; Display the mode is "rotate"
         LDA #10
         LDX #8
-        LDY PLAYER
+        LDY PLAYER   ; Player 1 or 2
         BPL ROTATE1
         LDA #17
 ROTATE1 JMP DRAWSTR
-CLEAROUT
+
+CLEAROUT             ; Remove all player status info
         LDX #1
         LDA #9
         JSR DRAWSTR
@@ -52,69 +46,66 @@ CLEAROUT
         LDA #17
         JSR DRAWSTR
         RTS
-KEYBOARD DFB 0
+
+* poll the 'joystick'  50,50 is 'centered'  KP0 and KP1 are the directions
+
 JOY     LDA #50
         STA KP0
         STA KP1
-        LDA KEYBOARD
-        BNE KEYS
-        LDX #0
-        STX KP0
-        STX KP1
-        LDA $C070
-JOY1    LDA $C064
-        BPL WJOY0
-        STX KP0
-PD1     LDA $C065
-        BPL WJOY1
-        STX KP1
-PD2     INX
-        BNE JOY1
-KEYS    JSR ARROWS
+        JSR ARROWS  ; check arrow keys
         LDA $C000
-        CMP #$92
-        BEQ PD3
-        CMP #$8B
-        BEQ PD4
-        CMP #$83
-        BNE PD3-1
+        CMP #$81    ; ^A - abort game entirely
+        BNE :snd
         STA $C010
+        PLA  ; fix the stack
+        PLA
+        JMP GAME1 
+:snd    CMP #$93    ; ^S - toggle sound
+        BNE :color
+        LDA SOUNDON
+        EOR #1
+        STA SOUNDON
+        STA $C010
+        RTS
+:color  CMP #$83    ; ^C - toggle color mode
+        BNE :done
         LDA COLORFLAG
         EOR #1
         STA COLORFLAG
-        RTS
-PD3     JMP GAME1
-WJOY0   BPL PD1
-WJOY1   BPL PD2
-PD4     LDA KEYBOARD
-        EOR #1
-        STA KEYBOARD
         STA $C010
-        RTS
+        PLA  ; fix the stack
+        PLA
+        JMP GAME2 
+:done   RTS
+
+* Make key presses look like joystick motion
+* Arrows: u,d,l,r = 8B,8A,88,95
+
 ARROWS  LDA $C000
-        CMP #201
+        CMP #$C9   ; I  E9 = i
         BNE AR1
         LDA #0
         STA KP1
-        JMP AROUT
-AR1     CMP #205
+        JMP ARCLEAR
+AR1     CMP #$CD   ; M  ED = m
         BNE AR2
         LDA #70
         STA KP1
-        JMP AROUT
-AR2     CMP #202
+        JMP ARCLEAR
+AR2     CMP #$CA   ; J  EA = j
         BNE AR3
         LDA #0
         STA KP0
-        JMP AROUT
-AR3     CMP #203
-        BNE ARNOT
+        JMP ARCLEAR
+AR3     CMP #$CB   ; K  EB = k
+        BNE AROUT
         LDA #70
         STA KP0
-AROUT   STA $C010
-ARNOT   RTS
+ARCLEAR STA $C010
+AROUT   RTS
+
 DELAY   LDA #125
-        JSR $FCA8
+        JSR WAIT
         RTS
 
 PLAYER  DFB 0
@@ -144,7 +135,7 @@ DRAWCUR STA 2
         STA 4
         LDA #1
         STA 5
-        JMP $9000
+        JMP LASER
 
 * start by saving off the board starting setup
 
@@ -227,6 +218,9 @@ GAME4   LDA PLAYER
         EOR #$80
         STA PLAYER
         JMP GAME2
+
+* game over, someone lost
+
 EOG     STA $C010
         LDA #19
         LDX #9
@@ -243,6 +237,10 @@ EOG2    JSR DRAWSTR
         BNE EOG3
         INX
 EOG3    JSR DRAWSTR
+
+* keypress and new game start
+
+        STA $C010
 EOG1    LDA $C000
         BPL EOG1
         STA $C010
@@ -296,9 +294,13 @@ PLAYIT2 JSR DSCREEN
 P1      JSR DELAY
         JSR DELAY
         JSR JOY
+
         LDA #62
-        JSR DRAWCUR
-        LDA KP0
+        JSR DRAWCUR  ; erase old cursor
+
+* moving the cursor
+
+        LDA KP0     ; X Axis
         CMP #20
         BGE P2
         DEC XP
@@ -306,7 +308,8 @@ P1      JSR DELAY
 P2      CMP #70
         BLT P3
         INC XP
-P3      LDA KP1
+
+P3      LDA KP1     ; Y axis
         CMP #20
         BGE P4
         DEC YP
@@ -314,6 +317,9 @@ P3      LDA KP1
 P4      CMP #70
         BLT P5
         INC YP
+
+* legality of the move [0,9], [0,9]
+
 P5      LDA XP
         CMP #$FF
         BNE P6
@@ -334,10 +340,13 @@ P7      CMP #10
         BNE OK2
         LDA #9
         STA YP
+
 OK2     LDA #62
-        JSR DRAWCUR
-        LDA BUTTON0
-        BPL NO0
+        JSR DRAWCUR    ; Draw new cursor
+
+        LDA BUTTON0    ; button 0 pressed (TODO: space key)
+        BPL NO0        ; mot pressed
+
         LDA FL
         BNE NO0
         JSR GETZ
@@ -359,13 +368,15 @@ OK2     LDA #62
         STA ZSEL
         LDA #61
         JSR DRAWCUR
-        INC FL
-NO00    LDA BUTTON0
+        INC FL       ; made a selection (XSEL,YSEL,ZSEL)
+
+NO00    LDA BUTTON0  ; wait for button to be released
         BMI NO00
         JMP P1
-NO0
-        LDA BUTTON0
-        BPL NO1
+
+NO0     LDA BUTTON0 ; Button pressed???
+        BPL NO1     ; not pressed
+        
         LDA FL
         BEQ NO1
         LDA XP
@@ -389,13 +400,16 @@ BBB1    JSR GETZ
 BB1     JSR TESTMOVE
         BCS NO1
         JMP MADEMOVE
-NO1     LDA BUTTON1
-        BMI BB2
+
+NO1     LDA BUTTON1  ; if button 1 is down, then revert
+        BMI BB2      ; yes, try to revert
         JMP P1
-BB2     LDA FL
+
+BB2     LDA FL       ; is there a pending operation (e.g. move has started)?
         BNE BB3
-        JMP P1
-BB3     LDA #0
+        JMP P1 
+
+BB3     LDA #0       ; revert the move operation
         STA FL
         LDA XP
         PHA
@@ -412,9 +426,11 @@ BB3     LDA #0
         PLA
         STA XP
         JMP P1
+
 MADEMOVE 
         LDA BUTTON0
         BMI MADEMOVE
+
         LDA #0
         LDX YSEL
 MM1     DEX
@@ -455,25 +471,33 @@ MM6     JSR DRAWROT
         JSR DELAY
         JSR DELAY
         JSR DELAY
-        LDA BUTTON0
-        BMI MM7
-        LDA BUTTON1
-        BPL PATCH1
-        JMP PLAYIT3
-PATCH1  JSR JOY
+        
+        LDA BUTTON0  ; mouse still down?
+        BMI MM7      ; yes, still rotating
+        
+        LDA BUTTON1  ; button1 down, abort operation TODO: escape key
+        BPL PATCH1   ; mo, then rotate more
+
+        JMP PLAYIT3  ; Finish the rotation!
+
+PATCH1  JSR JOY  ; pick the rotation based on joystick X axis
         LDA KP0
         CMP #70
         BLT MM6
         LDY ZSEL
         LDA ROTTBL,Y
-        STA ZSEL
+        STA ZSEL ; new piece is the result of rotating the current piece
         JMP MM6
+
 MM7     LDX Z
         LDA ZSEL
         ORA PLAYER
         STA BOARDBASE,X
         JSR DSCREEN
         JMP EVENMORE
+
+* draw the current selected square
+
 DRAWROT LDA XP
         STA 0
         LDA YP
@@ -483,7 +507,7 @@ DRAWROT LDA XP
         LDA #1
         STA 4
         STA 5
-        JMP $9000
+        JMP LASER
 
 ROTTBL  DFB 0,0,0,4,5,3,7,8,6,10,9,12,11,13,15,16,17,14
         DFB 19,18,21,20,23,22,25,24,27,28,29,26,30
@@ -684,11 +708,16 @@ BLOCKS = BL+8
 * Routine from Assembly Cookbook for the Apple II/IIe (Don Lancaster)
 *  Chapter 4: Obnoxious Sounds
 
+SOUNDON DFB 1    ; is sound enabled or not
+
 SOUND    
         PHP 
         PHA 
         TYA 
-        PHA 
+        PHA
+        LDY SOUNDON
+        CPY #0
+        BEQ EXIT4
         TXA 
         CMP FLNGTH4 
         BCC LOK4 
