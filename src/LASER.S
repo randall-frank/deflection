@@ -212,8 +212,11 @@ DIGG    LDA #1
         LDA 2
         AND #$7F
         STA 2
-DIFF2   JSR LASER
-        INC XLOC
+DIFF2   LDA 2
+        CMP #$1F
+        BEQ :nodraw
+        JSR LASER
+:nodraw INC XLOC
         LDA XLOC
         CMP #10
         BLT PAG1
@@ -222,5 +225,6 @@ DIFF2   JSR LASER
         INC YLOC
         LDA YLOC
         CMP #10
-        BLT PAG1
-        RTS
+        BGE :done
+        JMP PAG1
+:done   RTS

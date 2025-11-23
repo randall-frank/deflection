@@ -5,10 +5,14 @@
 
         PUT COMMON.S
 
-KP0 = $1C
-KP1 = KP0+1
+KP0 = $1E
+KP1 = $1F
 
         JMP START
+        JMP PLAYSOUND_LOCAL
+        JMP RANDOM_SETUP_LOCAL
+        JMP RANDOM_LOCAL
+        JMP DRAWSTRING_LOCAL
 
 CALC    LDA LO,X     ; set up $26,$27 to scanline in X register
         STA $26
@@ -16,38 +20,48 @@ CALC    LDA LO,X     ; set up $26,$27 to scanline in X register
         STA $27
         RTS
 
-SELECT  JSR CLEAROUT ; Display the mode is "select"
-        LDA #9
-        LDX #7
-        LDY PLAYER   ; Player 1 or 2
-        BPL SELECT1
-        LDA #16
-SELECT1 JMP DRAWSTR
+STATEMSG DFB   0
 
-ROTATE  JSR CLEAROUT ; Display the mode is "rotate"
-        LDA #10
-        LDX #8
-        LDY PLAYER   ; Player 1 or 2
-        BPL ROTATE1
-        LDA #17
-ROTATE1 JMP DRAWSTR
+CHANGESTATE
+        JSR CLEAROUT ; Display the mode message
+        LDY #9*8
+        LDA PLAYER   ; Player 1 or 2
+        BPL :upper
+        LDY #16*8
+:upper  LDA STATEMSG
+        LDX #30
+        JMP DRAWSTRING
+
+; Display the mode "select"
+
+SELECT  LDA #DS_select
+        STA STATEMSG
+        JMP CHANGESTATE
+
+; Display the mode "rotate"
+
+ROTATE  LDA #DS_rotate
+        STA STATEMSG
+        JMP CHANGESTATE
+
+; Display the mode "place"
+
+PLACE   LDA #DS_place
+        STA STATEMSG
+        JMP CHANGESTATE
 
 CLEAROUT             ; Remove all player status info
-        LDX #1
-        LDA #9
-        JSR DRAWSTR
-        LDX #1
-        LDA #10
-        JSR DRAWSTR
-        LDX #1
-        LDA #16
-        JSR DRAWSTR
-        LDX #1
-        LDA #17
-        JSR DRAWSTR
+        LDX #30
+        LDY #9*8
+        LDA #DS_blank
+        JSR DRAWSTRING
+        LDX #30
+        LDY #16*8
+        LDA #DS_blank
+        JSR DRAWSTRING
         RTS
 
-* poll the 'joystick'  50,50 is 'centered'  KP0 and KP1 are the directions
+* poll 'joystick' KP0,KP1 are the values 50,50 is 'centered'  
 
 JOY     LDA #50
         STA KP0
@@ -144,6 +158,7 @@ S1      LDA BOARDBASE,Y
         STA $7A00,Y
         INY
         BNE S1
+        JSR RANDOM_SETUP
 
 * Restore the initial board setup
 
@@ -158,56 +173,38 @@ S2      LDA $7A00,Y
         STA $C010
         JSR $F3E2
         LDA $C052
-        LDX #0
+        
         LDA #0
-        JSR DRAWSTR
-        LDX #2
-        LDA #2
-        JSR DRAWSTR
-        LDX #3
-        TXA
-        JSR DRAWSTR
-        LDA #6
-        LDX #4
-        JSR DRAWSTR
-        LDA #13
-        LDX #5
-        JSR DRAWSTR
-        LDA #21
-        LDX #10
-        JSR DRAWSTR
-        LDA #22
-        LDX #11
-        JSR DRAWSTR
-        JSR RECOUNT
-        LDA PLAY1
-        ORA #$30
-        STA BLOCKS
-        LDA #7
+        STA PLAYER
+
+        LDY #4          ; General title stuff
         LDX #6
-        JSR DRAWSTR
-        LDA PLAY2
-        ORA #$30
-        STA BLOCKS
-        LDA #14
-        LDX #6
-        JSR DRAWSTR
+        LDA #DS_deflection
+        JSR DRAWSTRING
+        LDY #22*8-2         ; Copyright stuff
+        LDX #7
+        LDA #DS_copyright
+        JSR DRAWSTRING
+
+        LDY #6*8
+        LDX #30
+        LDA #DS_player1
+        JSR DRAWSTRING
+
+        LDY #13*8
+        LDX #30
+        LDA #DS_player2
+        JSR DRAWSTRING
+
+        JSR PLAYERBLOCKS
+
 GAME2   JSR DSCREEN
         JSR PLAYIT
         JSR CLEAROUT
-        JSR RECOUNT
-        LDA PLAY1
-        ORA #$30
-        STA BLOCKS
-        LDA #7
-        LDX #6
-        JSR DRAWSTR
-        LDA PLAY2
-        ORA #$30
-        STA BLOCKS
-        LDA #14
-        LDX #6
-        JSR DRAWSTR
+        JSR PLAYERBLOCKS
+
+* Is the game over?
+
         LDA PLAY1
         BNE GAME3
         JMP EOG
@@ -222,21 +219,28 @@ GAME4   LDA PLAYER
 * game over, someone lost
 
 EOG     STA $C010
-        LDA #19
-        LDX #9
-        JSR DRAWSTR
-        LDA #8
-        LDX #12
-        LDY PLAY1
+
+        LDY #2*8
+        LDX #30
+        LDA #DS_gameover
+        JSR DRAWSTRING
+
+        LDY #9*8
+        LDX #DS_winner
+        LDA PLAY1
         BNE EOG2
         INX
-EOG2    JSR DRAWSTR
-        LDA #15
-        LDX #12
-        LDY PLAY2
+EOG2    TXA
+        LDX #30
+        JSR DRAWSTRING
+        LDY #16*8
+        LDX #DS_winner
+        LDA PLAY2
         BNE EOG3
         INX
-EOG3    JSR DRAWSTR
+EOG3    TXA
+        LDX #30
+        JSR DRAWSTRING
 
 * keypress and new game start
 
@@ -369,6 +373,7 @@ OK2     LDA #62
         LDA #61
         JSR DRAWCUR
         INC FL       ; made a selection (XSEL,YSEL,ZSEL)
+        JSR PLACE
 
 NO00    LDA BUTTON0  ; wait for button to be released
         BMI NO00
@@ -411,6 +416,7 @@ BB2     LDA FL       ; is there a pending operation (e.g. move has started)?
 
 BB3     LDA #0       ; revert the move operation
         STA FL
+        JSR SELECT
         LDA XP
         PHA
         LDA YP
@@ -624,85 +630,156 @@ TM10    CMP #0
         LDA BOARDBASE,X
         CMP #$1E
         BEQ TM5
+        CMP #$1F
+        BEQ TM5
 TM11    SEC
         RTS
-*************************
-*  DRAWS STRING POINTED AT BY X REG AT X=30 Y= A LINE
-************************
-DRAWSTR ASL
+
+PLAYERBLOCKS
+        JSR RECOUNT
+
+        LDA PLAY1
+        ORA #$30
+        STA BLOCKS
+        LDY #7*8
+        LDX #30
+        LDA #DS_blocks
+        JSR DRAWSTRING
+
+        LDA PLAY2
+        ORA #$30
+        STA BLOCKS
+        LDY #14*8
+        LDX #30
+        LDA #DS_blocks
+        JSR DRAWSTRING
+        RTS
+
+* The X register is the starting column [0-39]
+* The Y regiester is the starting row (pixels) [0-191]
+* The A register is the string number DS_*
+
+DS_X    = $19 ; current column
+DS_Y    = $1A ; current row in pixels
+DS_XS   = $1B ; column start (return to with 'nl')
+DS_TMPY = $1C ; pixel row for current byte
+DS_CNT  = $1D ; number of rows to draw
+
+DRAWSTRING_LOCAL
+        STX DS_X
+        STX DS_XS
         ASL
-        ASL
-        STA 1
-        LDA #0
-DSTR1   DEX
-        BMI DSTR2
+        TAX  ; convert A to text address
+        LDA DS_TABLE,X
+        STA NEXTCHR+1
+        INX
+        LDA DS_TABLE,X
+        STA NEXTCHR+2
+        STY DS_Y
+
+NEXTCHR LDA $FFFF  ; get the next character in the string
+        INC NEXTCHR+1
+        BNE :isnull
+        INC NEXTCHR+2
+:isnull CMP #0
+        BNE :dochar
+        RTS
+:dochar CMP #10    ; newline character
+        BNE :drawit
+
+        LDA DS_XS   ; Handle newline: reset X and add 8 to Y
+        STA DS_X
+        LDA DS_Y
         CLC
-        ADC #10
-        JMP DSTR1
-DSTR2   TAY
-        LDA #30
-        STA 0
-DSTR3   LDA STRTBL,Y
-        JSR PLOT
-        INY
-        INC 0
-        LDA 0
-        CMP #40
-        BNE DSTR3
-        RTS
-PLOT    PHA
-        LDA #13
-        STA PLACE+2
-        PLA
-        ASL
-        ROL PLACE+2
-        ASL
-        ROL PLACE+2
-        ASL
-        ROL PLACE+2
-        STA PLACE+1
-        LDX #7
-        STX QQQ
-        LDX 1
-        STX QQ1
-        STY QQ2
-PLOT1   LDX 1
+        ADC #8
+        STA DS_Y
+        JMP NEXTCHR
+
+:drawit STA FNTBYTE+1
+        LDA #$0D    ; high order byte of FONTBASE shifted right 3 bits
+        STA FNTBYTE+2
+
+        ASL FNTBYTE+1 ; multiply 16 bit font address by 8
+        ROL FNTBYTE+2
+        ASL FNTBYTE+1
+        ROL FNTBYTE+2
+        ASL FNTBYTE+1
+        ROL FNTBYTE+2  
+
+        LDX DS_Y    ; reset the Y address
+        STX DS_TMPY
+        LDA #8
+        STA DS_CNT  ; how many bytes to render
+
+:byte1  LDX DS_TMPY
         JSR CALC
-PLACE   LDA $FFFF
-        LDY 0
+FNTBYTE LDA $FFFF
+        INC FNTBYTE+1
+        BNE :lclinc
+        INC FNTBYTE+2
+:lclinc LDY DS_X
         STA ($26),Y
-        INC PLACE+1
-        INC 1
-        DEC QQQ
-        BPL PLOT1
-        LDX QQ1
-        STX 1
-        LDY QQ2
-        RTS
+        INC DS_TMPY ; next scanline
+        DEC DS_CNT
+        BNE :byte1
+        INC DS_X    ; next column
+        JMP NEXTCHR
 
-QQQ     DFB 0
-QQ2     DFB 0
-QQ1     DFB 0
+DS_TABLE
+        DA DS_S_deflect
+        DA DS_S_cright
+        DA DS_S_player1     
+        DA DS_S_player2     
+        DA DS_S_blocks     
+        DA DS_S_select      
+        DA DS_S_rotate
+        DA DS_S_place     
+        DA DS_S_gameover    
+        DA DS_S_winner    
+        DA DS_S_loser 
+        DA DS_S_blank
 
-STRTBL  ASC 'Deflection'
-        ASC '          '
-        asc 'Ver: '
+DS_S_deflect
+        ASC 'Deflection ('
         PUT VERSION.S
-        asc '          '
-        asc ' Player 1 '
-        asc ' Player 2 '
-BL      asc ' Blocks:0 '
-        asc ' <Select> '
-        asc ' <Rotate> '
-        asc 'Game Over '
-        asc ' '
-        hex  13
-        asc    ' 1987  '
-        ASC ' R. Frank '
+        ASC ')'
+        HEX 00
+DS_S_cright
+        ASC 'Copyright ',$13,' 1987',$0A
+        ASC '  Randy Frank'
+        HEX 00
+DS_S_player1
+        ASC ' L Player '
+        HEX 00
+DS_S_player2
+        ASC ' R Player '
+        HEX 00
+DS_S_blocks
+        ASC ' Blocks:0 '
+        HEX 00
+BLOCKS   = DS_S_blocks+8
+DS_S_select
+        ASC ' <Select> '
+        HEX 00
+DS_S_rotate
+        ASC ' <Rotate> '
+        HEX 00
+DS_S_place
+        ASC ' <Place>  '
+        HEX 00
+DS_S_gameover
+        ASC 'Game Over '
+        HEX 00
+DS_S_winner
         ASC '  Winner  '
-        asc '  Loser   '
+        HEX 00
+DS_S_loser        
+        ASC '  Loser   '
+        HEX 00
+DS_S_blank
+        ASC '          '
+        HEX 00
 
-BLOCKS = BL+8
 
 * Sound in the X register [0,15]
 * Routine from Assembly Cookbook for the Apple II/IIe (Don Lancaster)
@@ -710,7 +787,7 @@ BLOCKS = BL+8
 
 SOUNDON DFB 1    ; is sound enabled or not
 
-SOUND    
+PLAYSOUND_LOCAL    
         PHP 
         PHA 
         TYA 
@@ -774,7 +851,7 @@ SEF13   DFB $30,$07 ; French horn (fail buzzer?)
 SEF14   DFB $01,$15 ; Pass beep
 SEF15   DFB $01,$64 ; Time bomb
 
-RANDOM_SETUP 
+RANDOM_SETUP_LOCAL 
         LDA $4E          ; Seed the random number generator
         STA R1           ; based on delay between keypresses
         STA R3
@@ -794,7 +871,8 @@ R4      DFB 0
 
 * return a random byte 
 
-RANDOM  ROR R4           ; Bit 25 to carry
+RANDOM_LOCAL
+        ROR R4           ; Bit 25 to carry
         LDA R3           ; Shift left 8 bits
         STA R4
         LDA R2

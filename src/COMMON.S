@@ -1,32 +1,76 @@
 
+* Common address/values
+
 * Tables from GFXTABLES
-HIGH = $9500
-LO = $9400
-DIRBASE = $9300
+HIGH        = $9500  ; HGR1 scanline high order addresses
+LO          = $9400  ; HGR1 scanline low order addresses
+DIRBASE     = $9300
+
+* Font ($400 bytes)
+FONTBASE    = $6800
 
 * Tables from TBLD
-DXTBL = $7E00
-DYTBL = $7F00
+DXTBL       = $7E00
+DYTBL       = $7F00
 
 * from GUNCODE.S1
-RAY = $7B00
+RAY         = $7B00
 
 * from LASER.S
 * dispatch table at start of unit
-LASER = $9000
-CUT = $9003         ; was $9100
-DSCREEN = $9006     ; was $90FD (page)
-COLORFLAG = $9009   ; was $90FC 
+LASER       = $9000
+CUT         = $9003   ; was $9100
+DSCREEN     = $9006   ; was $90FD (page)
+COLORFLAG   = $9009   ; was $90FC 
 
 * Kind of from START.S
-BOARDBASE = $9200
-BOARDSAVE = BOARDBASE+128
+BOARDBASE   = $9200
+BOARDSAVE   = BOARDBASE+128
 
 * Apple II ROM/addresses
-HPLOT = $F45A
-HPOSN = $F411
-HCOLOR = $F6F0
-BUTTON0 = $C061
-BUTTON1 = $C062
-SPKR = $C030 
-WAIT = $FCA8
+HPLOT       = $F45A
+HPOSN       = $F411
+HCOLOR      = $F6F0
+BUTTON0     = $C061
+BUTTON1     = $C062
+SPKR        = $C030 
+WAIT        = $FCA8
+
+* Sounds
+PLAYSOUND       = $6003  ; sound to play in X register
+SOUND_Drip      = 0
+SOUND_Whoop     = 1
+SOUND_Pip       = 2
+SOUND_Phasor    = 3
+SOUND_Scale     = 4
+SOUND_S_beep    = 5
+SOUND_M_beep    = 6
+SOUND_L_beep    = 7
+SOUND_Geiger    = 8
+SOUND_Gleep     = 9
+SOUND_Whooping  = 10
+SOUND_Qwip      = 11
+SOUND_Laser     = 12
+SOUND_Fail      = 13
+SOUND_Pass      = 14
+SOUND_Timebomb  = 15
+
+* Random number generator
+RANDOM_SETUP    = $6006  ; Must be called first
+RANDOM          = $6009  ; random byte returned in A
+
+
+* Draw text: X=column [0-39], Y=row [0-191], A=string number
+DRAWSTRING      = $600C
+DS_deflection   = 0
+DS_copyright    = 1
+DS_player1      = 2
+DS_player2      = 3
+DS_blocks       = 4
+DS_select       = 5
+DS_rotate       = 6
+DS_place        = 7
+DS_gameover     = 8
+DS_winner       = 9
+DS_loser        = 10
+DS_blank        = 11
