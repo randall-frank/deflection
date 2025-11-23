@@ -1,8 +1,6 @@
 - Improve README
-- Add help
 - Enable keyboard only mode - remove joystick
 - Restrict cursor motion (show valid placements)
-- Rework display, names, copyright, use lower case, etc
 - itch.io integration
 - can't rotate 'key' squares
 - add sound

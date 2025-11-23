@@ -16,7 +16,7 @@ LASER.SHAPES - @ 8000 - game icons ($fff bytes)
 
 2000 - HGR screen
 6000 - GAME (GAME.S)
-6800 - FONT binary ($400 bytes)
+6C00 - FONT binary ($400 bytes)
 7B00 - GUNCODE - AKA 'RAY' 
 7E00 - DXTBL (100 bytes) - TBLD
 7F00 - DYTBL (100 bytes) - TBLD

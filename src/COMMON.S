@@ -74,3 +74,10 @@ DS_gameover     = 8
 DS_winner       = 9
 DS_loser        = 10
 DS_blank        = 11
+DS_box          = 12
+DS_unbox        = 13
+DS_help         = 14
+
+* placement vertically of user info boxes
+Y_player1       = 24
+Y_player2       = 80

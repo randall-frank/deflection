@@ -22,14 +22,31 @@ CALC    LDA LO,X     ; set up $26,$27 to scanline in X register
 
 STATEMSG DFB   0
 
+DRAWBOX 
+        LDY #Y_player1
+        LDA #DS_box
+        LDX PLAYER   ; Player 1 or 2
+        BPL :nobox
+        LDA #DS_unbox
+:nobox  LDX #30
+        JSR DRAWSTRING
+        LDY #Y_player2
+        LDA #DS_unbox
+        LDX PLAYER   ; Player 1 or 2
+        BPL :box
+        LDA #DS_box
+:box    LDX #30
+        JSR DRAWSTRING        
+        RTS
+
 CHANGESTATE
         JSR CLEAROUT ; Display the mode message
-        LDY #9*8
+        LDY #Y_player1+32
         LDA PLAYER   ; Player 1 or 2
         BPL :upper
-        LDY #16*8
+        LDY #Y_player2+32
 :upper  LDA STATEMSG
-        LDX #30
+        LDX #31
         JMP DRAWSTRING
 
 ; Display the mode "select"
@@ -51,14 +68,15 @@ PLACE   LDA #DS_place
         JMP CHANGESTATE
 
 CLEAROUT             ; Remove all player status info
-        LDX #30
-        LDY #9*8
+        LDX #31
+        LDY #Y_player1+32
         LDA #DS_blank
         JSR DRAWSTRING
-        LDX #30
-        LDY #16*8
+        LDX #31
+        LDY #Y_player2+32
         LDA #DS_blank
         JSR DRAWSTRING
+        JSR DRAWBOX
         RTS
 
 * poll 'joystick' KP0,KP1 are the values 50,50 is 'centered'  
@@ -185,14 +203,19 @@ S2      LDA $7A00,Y
         LDX #7
         LDA #DS_copyright
         JSR DRAWSTRING
-
-        LDY #6*8
+        
+        LDY #18*8
         LDX #30
+        LDA #DS_help
+        JSR DRAWSTRING
+
+        LDY #Y_player1+8
+        LDX #31
         LDA #DS_player1
         JSR DRAWSTRING
 
-        LDY #13*8
-        LDX #30
+        LDY #Y_player2+8
+        LDX #31
         LDA #DS_player2
         JSR DRAWSTRING
 
@@ -220,26 +243,26 @@ GAME4   LDA PLAYER
 
 EOG     STA $C010
 
-        LDY #2*8
+        LDY #4
         LDX #30
         LDA #DS_gameover
         JSR DRAWSTRING
 
-        LDY #9*8
+        LDY #Y_player1+32
         LDX #DS_winner
         LDA PLAY1
         BNE EOG2
         INX
 EOG2    TXA
-        LDX #30
+        LDX #31
         JSR DRAWSTRING
-        LDY #16*8
+        LDY #Y_player2+32
         LDX #DS_winner
         LDA PLAY2
         BNE EOG3
         INX
 EOG3    TXA
-        LDX #30
+        LDX #31
         JSR DRAWSTRING
 
 * keypress and new game start
@@ -641,16 +664,16 @@ PLAYERBLOCKS
         LDA PLAY1
         ORA #$30
         STA BLOCKS
-        LDY #7*8
-        LDX #30
+        LDY #Y_player1+16
+        LDX #31
         LDA #DS_blocks
         JSR DRAWSTRING
 
         LDA PLAY2
         ORA #$30
         STA BLOCKS
-        LDY #14*8
-        LDX #30
+        LDY #Y_player2+16
+        LDX #31
         LDA #DS_blocks
         JSR DRAWSTRING
         RTS
@@ -658,6 +681,10 @@ PLAYERBLOCKS
 * The X register is the starting column [0-39]
 * The Y regiester is the starting row (pixels) [0-191]
 * The A register is the string number DS_*
+
+* 00 = end of string
+* 0A = new line (y=y+8, x=xstart)
+* 01 = advance cursor, no draw
 
 DS_X    = $19 ; current column
 DS_Y    = $1A ; current row in pixels
@@ -684,7 +711,9 @@ NEXTCHR LDA $FFFF  ; get the next character in the string
 :isnull CMP #0
         BNE :dochar
         RTS
-:dochar CMP #10    ; newline character
+:dochar CMP #1
+        BEQ :cdone
+        CMP #10    ; newline character
         BNE :drawit
 
         LDA DS_XS   ; Handle newline: reset X and add 8 to Y
@@ -695,7 +724,12 @@ NEXTCHR LDA $FFFF  ; get the next character in the string
         STA DS_Y
         JMP NEXTCHR
 
-:drawit STA FNTBYTE+1
+* FONT is at 6C00 we need to multiply char by 8
+* and add to 6C00.  Divide 6C00 by 8 to get 0D80
+* so we OR 0D80 with the char and shift the addr
+
+:drawit ORA #$80
+        STA FNTBYTE+1
         LDA #$0D    ; high order byte of FONTBASE shifted right 3 bits
         STA FNTBYTE+2
 
@@ -722,7 +756,7 @@ FNTBYTE LDA $FFFF
         INC DS_TMPY ; next scanline
         DEC DS_CNT
         BNE :byte1
-        INC DS_X    ; next column
+:cdone  INC DS_X    ; next column
         JMP NEXTCHR
 
 DS_TABLE
@@ -738,6 +772,9 @@ DS_TABLE
         DA DS_S_winner    
         DA DS_S_loser 
         DA DS_S_blank
+        DA DS_S_box
+        DA DS_S_unbox
+        DA DS_S_help
 
 DS_S_deflect
         ASC 'Deflection ('
@@ -749,40 +786,64 @@ DS_S_cright
         ASC '  Randy Frank'
         HEX 00
 DS_S_player1
-        ASC ' L Player '
+        ASC 'L Player'
         HEX 00
 DS_S_player2
-        ASC ' R Player '
+        ASC 'R Player '
         HEX 00
 DS_S_blocks
-        ASC ' Blocks:0 '
+        ASC 'Blocks:0'
         HEX 00
-BLOCKS   = DS_S_blocks+8
+BLOCKS   = DS_S_blocks+7
 DS_S_select
-        ASC ' <Select> '
+        ASC '<Select>'
         HEX 00
 DS_S_rotate
-        ASC ' <Rotate> '
+        ASC '<Rotate>'
         HEX 00
 DS_S_place
-        ASC ' <Place>  '
+        ASC '<Place> '
         HEX 00
 DS_S_gameover
         ASC 'Game Over '
         HEX 00
 DS_S_winner
-        ASC '  Winner  '
+        ASC ' Winner '
         HEX 00
 DS_S_loser        
-        ASC '  Loser   '
+        ASC ' Loser  '
         HEX 00
 DS_S_blank
-        ASC '          '
+        ASC '        '
         HEX 00
+DS_S_box
+        HEX 141818181818181818150A
+        HEX 190101010101010101190A
+        HEX 190101010101010101190A
+        HEX 190101010101010101190A
+        HEX 190101010101010101190A
+        HEX 161818181818181818170A
+        HEX 00
+DS_S_unbox
+        HEX 202020202020202020200A
+        HEX 200101010101010101200A
+        HEX 200101010101010101200A
+        HEX 200101010101010101200A
+        HEX 200101010101010101200A
+        HEX 202020202020202020200A
+        HEX 00
+DS_S_help
+        ASC 'IJKM: move',$0A
+        ASC 'OA: select',$0A
+        ASC 'SA: undo',$0A
+        ASC '^S: sound',$0A
+        ASC '^C: color',$0A
+        ASC '^A: abort',$00
 
 
 * Sound in the X register [0,15]
-* Routine from Assembly Cookbook for the Apple II/IIe (Don Lancaster)
+* Routine from:
+*  Assembly Cookbook for the Apple II/IIe (Don Lancaster)
 *  Chapter 4: Obnoxious Sounds
 
 SOUNDON DFB 1    ; is sound enabled or not
