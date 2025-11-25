@@ -25,6 +25,9 @@ BASE = $26
 
 LOCAL_COLORFLAG DFB 0       ; was $90FC
 
+* TODO: document LASER:
+* XLOC,YLOC,OPT,SYS, ?NUM1,NUM2?
+
 LOCAL_LASER
         LDA YLOC
         STA YSTART
@@ -119,7 +122,7 @@ SCREEN  DFB 0
 TEMP0   DFB 0
 TEMP1   DFB 0
         DS 48
-        HEX 010004000600
+        HEX 010004000600    ; Shape table for a single pixel?
         DS 6
 
 LOCAL_CUT     

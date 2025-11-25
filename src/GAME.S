@@ -108,7 +108,14 @@ JOY     LDA #50
         PLA  ; fix the stack
         PLA
         JMP GAME2 
-:done   RTS
+:done   CMP #$91     ; ^Q - ProDOS BYE
+        BEQ :bye
+        RTS
+:bye    JSR   $BF00
+        HEX   65
+        DA    BYEMLI
+        RTS
+BYEMLI  HEX   04000000000000
 
 * Make key presses look like joystick motion
 * Arrows: u,d,l,r = 8B,8A,88,95
@@ -145,19 +152,22 @@ XP      DFB 0
 YP      DFB 0
 Z       DFB 0
 
-GETZ    LDA #0
+GETZ    LDA #0            ; multiply YP by 10
         LDX YP
 G1      DEX
         BMI G2
         CLC
         ADC #10
         JMP G1
-G2      CLC
+G2      CLC               ; add XP
         ADC XP
         TAX
-        LDA BOARDBASE,X
+        LDA BOARDBASE,X   ; Z is the piece at XP,YP
         STA Z
         RTS
+
+* Draw a piece ICON at XP,YP: 0:XP, 1:YP, 2:piece(A), 4:3, 5:1 
+
 DRAWCUR STA 2
         LDA XP
         STA 0
@@ -167,7 +177,8 @@ DRAWCUR STA 2
         STA 4
         LDA #1
         STA 5
-        JMP LASER
+        JSR LASER
+        RTS
 
 * start by saving off the board starting setup
 
@@ -192,24 +203,25 @@ S2      LDA $7A00,Y
         JSR $F3E2
         LDA $C052
         
+                        ; Initial setup
         LDA #0
         STA PLAYER
 
-        LDY #4          ; General title stuff
+        LDY #4          ; General title
         LDX #6
         LDA #DS_deflection
         JSR DRAWSTRING
-        LDY #22*8-2         ; Copyright stuff
+        LDY #22*8-2     ; Copyright stuff
         LDX #7
         LDA #DS_copyright
         JSR DRAWSTRING
         
-        LDY #18*8
+        LDY #17*8         ; help text
         LDX #30
         LDA #DS_help
         JSR DRAWSTRING
 
-        LDY #Y_player1+8
+        LDY #Y_player1+8   ; player strings
         LDX #31
         LDA #DS_player1
         JSR DRAWSTRING
@@ -219,11 +231,15 @@ S2      LDA $7A00,Y
         LDA #DS_player2
         JSR DRAWSTRING
 
-        JSR PLAYERBLOCKS
+        JSR PLAYERBLOCKS   ; 'Blocks'
+
+* Main game loop
 
 GAME2   JSR DSCREEN
-        JSR PLAYIT
-        JSR CLEAROUT
+        
+        JSR PLAYIT         ; one player's turn
+
+        JSR CLEAROUT       ; Update state and 'score' (blocks)
         JSR PLAYERBLOCKS
 
 * Is the game over?
@@ -293,39 +309,87 @@ NOT1D   DEY
         BPL SCANLOOP
         RTS
 
-FL      DFB 0
+**************************
+* Turn state
+
+FL      DFB 0             ; 0=still selecting, 1=selected and {XYZ}SEL are all valid
 XSEL    DFB 0
 YSEL    DFB 0
 ZSEL    DFB 0
 
-PLAYIT  LDY #101
-PL10    LDA BOARDBASE,Y
+* Pieces: high order bit set = player 2 (right)
+*
+* 03=NE pointing gun
+* 04=E pointing gun (04)
+* 05=SE pointing gun
+* 06=NW pointing gun
+* 07=W pointing gun (87)
+* 08=SW pointing gun
+* 09=/
+* 0A=\
+* 0B=|
+* 0C=--
+* 0D=Block
+* 0E=+\
+* 0F=+/
+* 10=\+
+* 11=/+
+* 12=T splitter
+* 13=diagonal T splitter
+* 14=Y splitter
+* 15=diagonal Y splitter
+* 16=light pipe bend right
+* 17=light pipe
+* 18=light pipe bend left
+* 19=light pipe
+* 1A=horiz up
+* 1B=+|
+* 1C=horiz down
+* 1D=|+
+* 1E=boundary
+* 1F=blank boundary
+
+* 3D=solid blocks (61)
+* 3E=two squares (62)
+* 3F=square (63)
+
+******************************
+* One player's turn...
+
+PLAYIT  
+        LDY #101           ; Save off state (undo)
+:loop   LDA BOARDBASE,Y
         STA BOARDSAVE,Y
         DEY
-        BPL PL10
+        BPL :loop
         JMP PLAYIT2
-PLAYIT3 LDY #101
-PL12    LDA BOARDSAVE,Y
+
+UNDO    LDY #101           ; Restore (undo) state
+:uloop  LDA BOARDSAVE,Y
         STA BOARDBASE,Y
         DEY
-        BPL PL12
+        BPL :uloop
+
 PLAYIT2 JSR DSCREEN
-        LDA #0
+        LDA #0             ; Nothing selected
         STA FL
-        LDA #4
+
+        LDA #4             ; Start the cursor @ 4,4
         STA XP
         STA YP
         LDA #62
         JSR DRAWCUR
-        JSR SELECT
-P1      JSR DELAY
+
+        JSR SELECT         ; advertise "<select>" mode
+
+P1      JSR DELAY          ; time to see the cursor
         JSR DELAY
         JSR JOY
 
         LDA #62
-        JSR DRAWCUR  ; erase old cursor
+        JSR DRAWCUR        ; erase cursor
 
-* moving the cursor
+* move the cursor based on joystick KP0,KP1
 
         LDA KP0     ; X Axis
         CMP #20
@@ -346,6 +410,7 @@ P4      CMP #70
         INC YP
 
 * legality of the move [0,9], [0,9]
+* clamp as needed
 
 P5      LDA XP
         CMP #$FF
@@ -368,14 +433,15 @@ P7      CMP #10
         LDA #9
         STA YP
 
-OK2     LDA #62
-        JSR DRAWCUR    ; Draw new cursor
+OK2     LDA #62        ; Draw new cursor
+        JSR DRAWCUR    
 
         LDA BUTTON0    ; button 0 pressed (TODO: space key)
-        BPL NO0        ; mot pressed
+        BPL NO0        ; not pressed
 
-        LDA FL
+        LDA FL         ; already selected???
         BNE NO0
+
         JSR GETZ
         LDA Z
         AND #$80
@@ -456,7 +522,7 @@ BB3     LDA #0       ; revert the move operation
         STA XP
         JMP P1
 
-MADEMOVE 
+MADEMOVE                  ; switching to rotate mode
         LDA BUTTON0
         BMI MADEMOVE
 
@@ -495,7 +561,8 @@ MM5     CLC
         LDA ZSEL
         AND #$7F
         STA ZSEL
-        JSR ROTATE
+        JSR ROTATE        ; rotate mode
+        
 MM6     JSR DRAWROT
         JSR DELAY
         JSR DELAY
@@ -507,7 +574,7 @@ MM6     JSR DRAWROT
         LDA BUTTON1  ; button1 down, abort operation TODO: escape key
         BPL PATCH1   ; mo, then rotate more
 
-        JMP PLAYIT3  ; Finish the rotation!
+        JMP UNDO  ; Abort the operation
 
 PATCH1  JSR JOY  ; pick the rotation based on joystick X axis
         LDA KP0
@@ -536,7 +603,8 @@ DRAWROT LDA XP
         LDA #1
         STA 4
         STA 5
-        JMP LASER
+        JSR LASER
+        RTS
 
 ROTTBL  DFB 0,0,0,4,5,3,7,8,6,10,9,12,11,13,15,16,17,14
         DFB 19,18,21,20,23,22,25,24,27,28,29,26,30
@@ -833,12 +901,13 @@ DS_S_unbox
         HEX 202020202020202020200A
         HEX 00
 DS_S_help
-        ASC 'IJKM: move',$0A
-        ASC 'OA: select',$0A
-        ASC 'SA: undo',$0A
-        ASC '^S: sound',$0A
-        ASC '^C: color',$0A
-        ASC '^A: abort',$00
+        ASC 'IJKM: Move',$0A
+        ASC 'OA: Select',$0A
+        ASC 'SA: Undo',  $0A
+        ASC '^S: Sound', $0A
+        ASC '^C: Color', $0A
+        ASC '^A: Abort', $0A
+        ASC '^Q: Quit',  $00
 
 
 * Sound in the X register [0,15]
