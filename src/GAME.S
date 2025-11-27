@@ -8,11 +8,13 @@
 KP0 = $1E
 KP1 = $1F
 
-        JMP START
-        JMP PLAYSOUND_LOCAL
-        JMP RANDOM_SETUP_LOCAL
-        JMP RANDOM_LOCAL
-        JMP DRAWSTRING_LOCAL
+        JMP START               ; $6000
+        JMP PLAYSOUND_LOCAL     ; $6003
+        JMP RANDOM_SETUP_LOCAL  ; $6006
+        JMP RANDOM_LOCAL        ; $6009
+        JMP DRAWSTRING_LOCAL    ; $600C
+
+SNDON   DFB 1    ; is sound enabled or not $600F
 
 CALC    LDA LO,X     ; set up $26,$27 to scanline in X register
         STA $26
@@ -427,6 +429,7 @@ THEKEY  DFB 0
 XSEL    DFB 0
 YSEL    DFB 0
 ZSEL    DFB 0
+SCRATCH DFB 0
 
 * Swap the XP/XSEL and YP/YSEL values (destroys A)
 
@@ -468,9 +471,21 @@ UNDO    LDY #101           ; Restore (undo) state
         JSR SELECT         ; advertise "<select>" mode
 
 SELLOOP LDA #62
+        STA SCRATCH
+        JSR GETZ
+        LDA Z
+        BEQ :badsel
+        CMP #$1E
+        BEQ :badsel
+        AND #$80
+        CMP PLAYER
+        BEQ :oksel
+:badsel LDA #60
+        STA SCRATCH
+:oksel  LDA SCRATCH
         JSR DRAWCUR
         JSR DELAY          ; time to see the cursor
-        LDA #62
+        LDA SCRATCH
         JSR DRAWCUR        ; erase cursor
         JSR DELAY
         JSR CHECK_KEYS
@@ -517,9 +532,28 @@ TRYSELECT
 
 MOVELOOP
         LDA #62
+        STA SCRATCH
+        LDA XP
+        CMP XSEL
+        BNE :chkit
+        LDA YP
+        CMP YSEL
+        BEQ :okmove
+:chkit  JSR GETZ
+        LDA Z
+        CMP #$1E
+        BEQ :deeper
+        CMP #0
+        BNE :badmove
+:deeper JSR TESTMOVE
+        BCC :okmove      ; valid move
+:badmove 
+        LDA #60
+        STA SCRATCH
+:okmove LDA SCRATCH
         JSR DRAWCUR
         JSR DELAY          ; time to see the cursor
-        LDA #62
+        LDA SCRATCH
         JSR DRAWCUR        ; erase cursor
         JSR DELAY
         JSR CHECK_KEYS
@@ -602,11 +636,15 @@ MM5     CLC
         TAX
         LDA ZSEL
         STA BOARDBASE,X
-        STX Z
+        STX Z             ; save this for reuse later
         JSR DSCREEN
+
         LDA ZSEL
         AND #$7F
         STA ZSEL
+        CMP #$0D          ; If this is a block, we are done...
+        BEQ ROTDONE
+
         JSR ROTATE        ; change the mode text to <rotate>
 
 ROTATELOOP        
@@ -968,13 +1006,10 @@ DS_S_help
         ASC '^A: Abort', $0A
         ASC '^Q: Quit',  $00
 
-
 * Sound in the X register [0,15]
 * Routine from:
 *  Assembly Cookbook for the Apple II/IIe (Don Lancaster)
 *  Chapter 4: Obnoxious Sounds
-
-SOUNDON DFB 1    ; is sound enabled or not
 
 PLAYSOUND_LOCAL    
         PHP 
@@ -1022,7 +1057,7 @@ EXIT4
 
 TRPCNT4 DFB $01
 FLNGTH4 DFB $10
-         ; Table for sounds that start at '5'
+         ; Table for sounds
 SEFO    DFB $01,$08 ; Tick
 SEF1    DFB $01,$18 ; Whopidoop
 SEF2    DFB $ff,$01 ; Pip

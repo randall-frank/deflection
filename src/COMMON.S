@@ -37,7 +37,8 @@ SPKR        = $C030
 WAIT        = $FCA8
 
 * Sounds
-PLAYSOUND       = $6003  ; sound to play in X register
+SOUNDON         = $600F   ; flag 1 is sound is enabled
+PLAYSOUND       = $6003   ; sound to play in X register
 SOUND_Drip      = 0
 SOUND_Whoop     = 1
 SOUND_Pip       = 2
@@ -58,7 +59,6 @@ SOUND_Timebomb  = 15
 * Random number generator
 RANDOM_SETUP    = $6006  ; Must be called first
 RANDOM          = $6009  ; random byte returned in A
-
 
 * Draw text: X=column [0-39], Y=row [0-191], A=string number
 DRAWSTRING      = $600C
