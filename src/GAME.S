@@ -249,43 +249,48 @@ NOT1D   DEY
 * clamp as needed
 
 MOVECLAMP
+        LDX XP            ; save off old XP,YP
+        LDY YP
         LDA THEKEY         ; try to move the cursor
         CMP #KEY_up
         BNE :k1
         DEC YP
-        JMP CLAMP
+        JMP :validate
 :k1     CMP #KEY_down
         BNE :k2
         INC YP
-        JMP CLAMP    
+        JMP :validate    
 :k2     CMP #KEY_left
         BNE :k3
         DEC XP
-        JMP CLAMP    
+        JMP :validate    
 :k3     CMP #KEY_right
-        BNE CLAMP
+        BNE :validate
         INC XP
-CLAMP   LDA XP             ; validate the cursor location
+:validate   
+        LDA XP             ; validate the cursor location
         CMP #$FF
-        BNE P6
-        LDA #0
-        STA XP
-        JMP OK1
-P6      CMP #10
-        BNE OK1
-        LDA #9
-        STA XP
-OK1     LDA YP
+        BEQ :revert
+        CMP #10
+        BEQ :revert
+        LDA YP
         CMP #$FF
-        BNE P7
-        LDA #0
-        STA YP
-        JMP OK2
-P7      CMP #10
-        BNE OK2
-        LDA #9
-        STA YP
-OK2     RTS
+        BEQ :revert
+        CMP #10
+        BEQ :revert
+        CMP #0
+        BEQ :bounds
+        CMP #9
+        BEQ :bounds
+:ok     RTS
+:bounds LDA XP            ; in [1-8] boundary gap at the top or bottom
+        CMP #0
+        BEQ :ok
+        CMP #9
+        BEQ :ok
+:revert STX XP
+        STY YP
+        RTS
 
 * Pieces: high order bit set = player 2 (right)
 *
@@ -417,11 +422,28 @@ KKEYS   HEX   EBCB95
 THEKEY  DFB 0
 
 **************************
-* Turn state
+* State
 
 XSEL    DFB 0
 YSEL    DFB 0
 ZSEL    DFB 0
+
+* Swap the XP/XSEL and YP/YSEL values (destroys A)
+
+SWAPPOSSEL
+        LDA XP
+        PHA
+        LDA XSEL
+        STA XP
+        PLA 
+        STA XSEL
+        LDA YP
+        PHA
+        LDA YSEL
+        STA YP
+        PLA 
+        STA YSEL
+        RTS
 
 ******************************
 * One player's turn...
@@ -432,6 +454,9 @@ ONEPLAYERTURN
         STA BOARDSAVE,Y
         DEY
         BPL :loop
+        LDA #4             ; Start the cursor @ 4,4
+        STA XP
+        STA YP        
         JMP :setup
 
 UNDO    LDY #101           ; Restore (undo) state
@@ -439,20 +464,16 @@ UNDO    LDY #101           ; Restore (undo) state
         STA BOARDBASE,Y
         DEY
         BPL :uloop
-
 :setup  JSR DSCREEN
-        LDA #4             ; Start the cursor @ 4,4
-        STA XP
-        STA YP
         JSR SELECT         ; advertise "<select>" mode
 
 SELLOOP LDA #62
         JSR DRAWCUR
         JSR DELAY          ; time to see the cursor
-        JSR DELAY
-        JSR CHECK_KEYS
         LDA #62
         JSR DRAWCUR        ; erase cursor
+        JSR DELAY
+        JSR CHECK_KEYS
 
 * handle non-motion keystrokes
 
@@ -498,17 +519,21 @@ MOVELOOP
         LDA #62
         JSR DRAWCUR
         JSR DELAY          ; time to see the cursor
-        JSR DELAY
-        JSR CHECK_KEYS
         LDA #62
         JSR DRAWCUR        ; erase cursor
+        JSR DELAY
+        JSR CHECK_KEYS
 
 * handle non-motion keystrokes
 
         LDA THEKEY
         CMP #KEY_redraw   ; redraw (^C)
         BNE :k0
-        JSR DSCREEN
+        JSR DSCREEN       ; This call erased the #61 cursor draw...
+        JSR SWAPPOSSEL    ; temp swap XP and XSEL as well as YP and YSEL
+        LDA #61           ; draw selection marker
+        JSR DRAWCUR
+        JSR SWAPPOSSEL
         JMP MOVELOOP
 :k0     CMP #KEY_sel      ; attempt to place
         BEQ TRYMOVE
