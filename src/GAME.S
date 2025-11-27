@@ -501,20 +501,26 @@ SELLOOP LDA #62
 :k0     CMP #KEY_sel      ; attempt to select (space)
         BEQ TRYSELECT
         JSR MOVECLAMP
-INVSEL  JMP SELLOOP
+        JMP SELLOOP
+
+BADSEL  LDX #SOUND_Fail
+        JSR PLAYSOUND
+        JMP SELLOOP
 
 TRYSELECT 
         JSR GETZ
         LDA Z
         AND #$80
         CMP PLAYER
-        BNE INVSEL
+        BNE BADSEL
         LDA Z
         AND #$7F
         CMP #3
-        BLT INVSEL
+        BLT BADSEL
         CMP #30
-        BGE INVSEL
+        BGE BADSEL
+        LDX #SOUND_Drip
+        JSR PLAYSOUND
 
 * switching to move mode
 
@@ -600,8 +606,12 @@ BBB1    JSR GETZ
         JMP NO1
 BB1     JSR TESTMOVE
         BCS NO1
+        LDX #SOUND_Drip
+        JSR PLAYSOUND
         JMP MADEMOVE
-NO1     JMP MOVELOOP
+NO1     LDX #SOUND_Fail
+        JSR PLAYSOUND
+        JMP MOVELOOP
 
 * Complete the move and switch to rotate mode
 
@@ -679,6 +689,8 @@ NEWROTATE
         LDY ZSEL
         LDA ROTTBL,Y
         STA ZSEL ; new piece is the result of rotating the current piece
+        LDX #SOUND_Drip
+        JSR PLAYSOUND
         JMP ROTATELOOP
 
 ROTDONE LDX Z
@@ -686,6 +698,8 @@ ROTDONE LDX Z
         ORA PLAYER
         STA BOARDBASE,X
         JSR DSCREEN
+        LDX #SOUND_Pass
+        JSR PLAYSOUND
 
 * We might be firing...
 
