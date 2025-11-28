@@ -209,7 +209,10 @@ HANDLEIT
         TAY
         LDA BOARDBASE,Y
         AND #$7F
-        STA PIECE
+        CMP #$1F
+        BLT :okblk
+        LDA #$1E
+:okblk  STA PIECE
         ASL
         ASL
         ASL
