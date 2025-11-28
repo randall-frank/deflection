@@ -63,19 +63,62 @@ Documentation and Issues
 ------------------------
 Gameplay is pretty simple.  A player selects a piece to move.  They can then move the
 piece to another location (note: the piece may stay in the same location).  Once moved,
-the piece may be rotated at the new location.  If the piece is the "gun" located just 
-off the 8x8 board, once rotated, it is "fired".  The beam is tracked through the 
+the piece may be rotated at the new location.  If the piece is the `gun` located just 
+off the 8x8 board, once rotated, it is `fired`.  The beam is tracked through the 
 board, interacting with and potentially destroying other pieces.
 
 Pieces (other than the gun) may be moved similar to a queen in chess.  Up, down and
 diagonally any number of non-empty squares.  It may not move over any other pieces.
-Other than the "block", they can be rotated at 90 degree increments. The gun piece
+Other than the `block`, they can be rotated at 90 degree increments. The gun piece
 can only be moved vertically in the column just off the 8x8 board.  
 
 Pieces can reflect fired beams 90 or 180 degrees.  Some pieces act like light-pipes,
 redirecting the ray 45 degrees.  There are also two beam splitters which split an
-incoming beam in the form of at 'T' or in the form of a 'Y'.  Both spit beams 
+incoming beam in the form of at **T** or in the form of a **Y**.  Both spit beams 
 continue to travel independently. 
+
+.. |block| image:: docs/block.png
+   :align: middle
+
+.. |pipe| image:: docs/pipe.png
+   :align: middle
+
+.. |gun| image:: docs/gun.png
+   :align: middle
+
+.. |tspl| image:: docs/t_split.png
+   :align: middle
+
+.. |yspl| image:: docs/y_split.png
+   :align: middle
+
+.. |diag1| image:: docs/diagonal.png
+   :align: middle
+
+.. |diag2| image:: docs/diag_back.png
+   :align: middle
+
+.. |vert1| image:: docs/vertical.png
+   :align: middle
+
+.. |vert2| image:: docs/vert_back.png
+   :align: middle
+
+
+================ ======== ======== ================
+Piece                              Vulnerable
+================ ======== ======== ================
+Block            |block|           All directions
+2-sided reflect  |diag1|  |vert1|  Parallel to line
+1-sided reflect  |diag2|  |vert2|  Parallel to line
+                                   and backside
+Light pipe       |pipe|            Directions other
+                                   than grooves
+Splitters        |tspl|   |yspl|   Directions other
+                                   than inlets
+Gun              |gun|             N/A
+================ ======== ======== ================
+
 
 All pieces have vulnerable directions.  For example the flat reflector cannot be
 hit edge on.  The 'block' piece cannot be hit from any direction.  There are diagonal 
