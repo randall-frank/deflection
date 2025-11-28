@@ -61,7 +61,32 @@ One can adjust the pathnames to CiderPress and Merlin at the top of the build.py
 
 Documentation and Issues
 ------------------------
-WIP
+Gameplay is pretty simple.  A player selects a piece to move.  They can then move the
+piece to another location (note: the piece may stay in the same location).  Once moved,
+the piece may be rotated at the new location.  If the piece is the "gun" located just 
+off the 8x8 board, once rotated, it is "fired".  The beam is tracked through the 
+board, interacting with and potentially destroying other pieces.
+
+Pieces (other than the gun) may be moved similar to a queen in chess.  Up, down and
+diagonally any number of non-empty squares.  It may not move over any other pieces.
+Other than the "block", they can be rotated at 90 degree increments. The gun piece
+can only be moved vertically in the column just off the 8x8 board.  
+
+Pieces can reflect fired beams 90 or 180 degrees.  Some pieces act like light-pipes,
+redirecting the ray 45 degrees.  There are also two beam splitters which split an
+incoming beam in the form of at 'T' or in the form of a 'Y'.  Both spit beams 
+continue to travel independently. 
+
+All pieces have vulnerable directions.  For example the flat reflector cannot be
+hit edge on.  The 'block' piece cannot be hit from any direction.  There are diagonal 
+or horizontal/vertical directional reflectors.  They may also have a 'backing' pad 
+that makes the reflectors vulnerable from the back side.  If a splitter or light-pipe
+is hit from a direction other than the input directions, they are also vulnerable.
+If ray hits a piece from a vulnerable direction, it is destroyed.  
+
+Game play continues back and forth until all of the block pieces have be destroyed
+for a player.  Note, it is very possible for a player to destroy their own pieces
+and therefore one can explicitly lose the game themselves.
 
 
 Please feel free to post issues and other questions at `Deflection Issues
@@ -71,7 +96,17 @@ to post questions and code.
 The game is also hosted on `itch.io <https://myleftgoat.itch.io/deflection>`_ which provides
 a simpler download option and forum to discuss more gameplay related issues.
 
+
+Things To Do
+~~~~~~~~~~~~
+Currently, there is no provision for a computer player.  It would be nice to
+include a way to play solo.
+
+There is no mechanism to save/load a game during play.  This would be very
+handy, especially while working on the computer player.
+
+Probably more?
+
 License
 -------
 `Deflection` is licensed under the MIT license.
-
