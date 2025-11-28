@@ -43,9 +43,28 @@ GETDXDY LDX X1
         LDA DYTBL,X
         STA DY
         RTS
-DELAY   LDA #$20
-        JSR $FCA8
+
+PITCH   DFB 0
+
+DELAY   LDA SOUNDON
+        BNE :laser
+        LDA #$20            ; 0.5*(26 + 27*A + 5*A*A) cycles
+        JSR WAIT
         RTS
+:laser  LDX #10
+:long   LDY PITCH
+:short  DEY
+        BNE :short
+        STA SPKR
+        DEX
+        BNE :long
+        LDA PITCH
+        CMP #200
+        BGE :done
+        CLC
+        ADC #1
+        STA PITCH
+:done   RTS
 
 XPOS    DFB 0
 YPOS    DFB 0
@@ -59,7 +78,10 @@ YDAT    HEX 0000000000000000
 DIR     HEX 0000000000000000
 X1      DFB 0
 
-STARTUP LDA #0
+STARTUP
+        LDA #10
+        STA PITCH
+        LDA #0
         LDX #7
 S1      STA STAT,X
         DEX
@@ -82,7 +104,8 @@ S1      STA STAT,X
         STA DIR
         LDA #0
         STA TOTAL
-NEXTLOOP LDA #0
+NEXTLOOP 
+        LDA #0
         STA T
 TLOP    LDA #7
         STA X1
@@ -90,7 +113,7 @@ LOOP1   JSR GETDXDY
         LDX X1
         LDA STAT,X
         BEQ NODO
-        LDX #4
+        LDX #4            ; Black 2
         JSR HCOLOR
         LDX X1
         LDA XDAT,X
@@ -110,7 +133,7 @@ LOOP1   JSR GETDXDY
         JSR HPOSN
         JSR HPLOT
         JSR DELAY
-        LDX #7
+        LDX #7            ; White 2
         JSR HCOLOR
         LDY X1
         LDA XDAT,Y
@@ -174,7 +197,8 @@ CDIR    DFB 0
 PIECE   DFB 0
 Z       DFB 0
 
-HANDLEIT LDX X1
+HANDLEIT 
+        LDX X1
         LDA DIR,X
         STA CDIR
         LDX YPOS

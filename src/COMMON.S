@@ -28,9 +28,13 @@ BOARDBASE   = $9200
 BOARDSAVE   = BOARDBASE+128
 
 * Apple II ROM/addresses
-HPLOT       = $F45A
-HPOSN       = $F411
-HCOLOR      = $F6F0
+HPLOTN      = $F457       ; A=Ypos, X=XposLO, Y=XposHI (calls HPOSN then HPLOT)
+HLINE       = $F53A
+
+
+HPLOT       = $F45A       ; Must call HPOSN first
+HPOSN       = $F411       ; A=Ypos, X=XposLO, Y=XposHI (E0-E2)
+HCOLOR      = $F6F0       ; X=COLOR
 BUTTON0     = $C061
 BUTTON1     = $C062
 SPKR        = $C030 

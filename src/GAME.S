@@ -698,14 +698,14 @@ ROTDONE LDX Z
         ORA PLAYER
         STA BOARDBASE,X
         JSR DSCREEN
-        LDX #SOUND_Pass
-        JSR PLAYSOUND
 
 * We might be firing...
 
         LDA ZSEL
         CMP #9
         BLT EM1
+        LDX #SOUND_Pass
+        JSR PLAYSOUND
         RTS
 EM1     LDA XP
         STA 0
