@@ -84,6 +84,12 @@ that makes the reflectors vulnerable from the back side.  If a splitter or light
 is hit from a direction other than the input directions, they are also vulnerable.
 If ray hits a piece from a vulnerable direction, it is destroyed.  
 
+
+.. image:: deflection.gif
+   :alt: Short gameplay
+   :align: center
+
+
 Game play continues back and forth until all of the block pieces have be destroyed
 for a player.  Note, it is very possible for a player to destroy their own pieces
 and therefore one can explicitly lose the game themselves.
