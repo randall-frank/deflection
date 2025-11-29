@@ -42,6 +42,11 @@ HLINE       = $F53A
 HPLOT       = $F45A       ; Must call HPOSN first
 HPOSN       = $F411       ; A=Ypos, X=XposLO, Y=XposHI (E0-E2)
 HCOLOR      = $F6F0       ; X=COLOR
+
+HHGR        = $F3E2
+HHGR2       = $F3D8
+HCLR        = $F3F2
+
 BUTTON0     = $C061
 BUTTON1     = $C062
 SPKR        = $C030 

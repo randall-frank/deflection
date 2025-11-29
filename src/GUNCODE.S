@@ -79,7 +79,7 @@ DIR     HEX 0000000000000000
 X1      DFB 0
 
 STARTUP
-        LDA #10
+        LDA #20
         STA PITCH
         LDA #0
         LDX #7
@@ -113,8 +113,6 @@ LOOP1   JSR GETDXDY
         LDX X1
         LDA STAT,X
         BEQ NODO
-        LDX #4            ; Black 2
-        JSR HCOLOR
         LDX X1
         LDA XDAT,X
         CLC
@@ -129,19 +127,13 @@ LOOP1   JSR GETDXDY
         PLA
         TAX
         TYA
-        LDY #0
-        JSR HPOSN
-        JSR HPLOT
+        JSR BPLOT
         JSR DELAY
-        LDX #7            ; White 2
-        JSR HCOLOR
         LDY X1
         LDA XDAT,Y
         TAX
         LDA YDAT,Y
-        LDY #0
-        JSR HPOSN
-        JSR HPLOT
+        JSR WPLOT
 NODO    DEC X1
         BPL LOOP1
         INC T
@@ -315,9 +307,11 @@ OK2     LDX X1
         STA DIR,Y
         RTS
 
-* plot white pixel at X,Y
+* plot white pixel (can only plot X from [0,255])
+* A=Ypos, X=XposLO, Y=XposHI (like the HPOSN call)
 
-WPLOT   LDA     HIGH,Y
+WPLOT   TAY
+        LDA     HIGH,Y
         STA     $27
         LDA     LO,Y
         STA     $26
@@ -330,9 +324,11 @@ WPLOT   LDA     HIGH,Y
         STA     ($26),Y
         RTS
 
-* plot black pixel at X,Y
+* plot black pixel (can only plot X from [0,255])
+* A=Ypos, X=XposLO, Y=XposHI (like the HPOSN call)
 
-BPLOT   LDA     HIGH,Y
+BPLOT   TAY
+        LDA     HIGH,Y
         STA     $27
         LDA     LO,Y
         STA     $26
@@ -383,7 +379,7 @@ D7SHIFT DFB      0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 0, 1
         DFB      2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3
 
 PBITS   HEX      01020408102040
-PMASK   HEX      7E7D7BF7EFDFBF
+PMASK   HEX      FEFDFBF7EFDFBF
 
 * 1 2 4 8 1 2 4 1 2 4 8 1 2 4
 * 1 0 0 0 0 0 0 0 1 1 1 1 1 1 1 - $01 $FE

@@ -135,8 +135,8 @@ S2      LDA STARTSAVE,Y
         LDX #$FF          ; reset the stack to allow jmp undo
         TXS
         STA $C010
-        JSR $F3E2
-        LDA $C052
+        JSR HHGR
+        LDA $C052         ; full page HGR
         
 * initial setup
 
@@ -216,6 +216,11 @@ EOG2    TXA
 EOG3    TXA
         LDX #31
         JSR DRAWSTRING
+
+* win sound
+
+        LDX #SOUND_Whooping
+        JSR PLAYSOUND
 
 * keypress and new game start
 
