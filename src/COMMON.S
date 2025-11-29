@@ -14,7 +14,7 @@ DXTBL       = $7E00
 DYTBL       = $7F00
 
 * from GUNCODE.S1
-RAY         = $7B00
+RAY         = $7000
 
 * from LASER.S
 * dispatch table at start of unit
@@ -25,12 +25,19 @@ COLORFLAG   = $9009   ; was $90FC
 
 * Kind of from START.S
 BOARDBASE   = $9200
-BOARDSAVE   = BOARDBASE+128
+BOARDSAVE   = BOARDBASE+128 ; used to undo a move
+STARTSAVE   = $7D00       ; used to start a new game
+
+* Icons from LASER.SHAPES
+ICONBASE    = $8000
+ICON_DX     =  21         ; 21 pixels wide (3 bytes)
+ICON_DY     =  19         ; 19 pixels high (10 tiles = 190 pixels total)
+ICON_XBYTES =  3
+ICON_BYTES  =  64         ; stored as 64 bytes/icon (57 used)
 
 * Apple II ROM/addresses
 HPLOTN      = $F457       ; A=Ypos, X=XposLO, Y=XposHI (calls HPOSN then HPLOT)
 HLINE       = $F53A
-
 
 HPLOT       = $F45A       ; Must call HPOSN first
 HPOSN       = $F411       ; A=Ypos, X=XposLO, Y=XposHI (E0-E2)

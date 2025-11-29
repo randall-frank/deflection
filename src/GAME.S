@@ -5,9 +5,6 @@
 
         PUT COMMON.S
 
-KP0 = $1E
-KP1 = $1F
-
         JMP START               ; $6000
         JMP PLAYSOUND_LOCAL     ; $6003
         JMP RANDOM_SETUP_LOCAL  ; $6006
@@ -122,7 +119,7 @@ DRAWCUR STA 2
 
 START   LDY #0
 S1      LDA BOARDBASE,Y
-        STA $7A00,Y
+        STA STARTSAVE,Y
         INY
         BNE S1
         JSR RANDOM_SETUP
@@ -130,18 +127,19 @@ S1      LDA BOARDBASE,Y
 * Restore the initial board setup
 
 GAME1   LDY #0
-S2      LDA $7A00,Y
+S2      LDA STARTSAVE,Y
         STA BOARDBASE,Y
         INY
         BNE S2
 
-        LDX #$FF
+        LDX #$FF          ; reset the stack to allow jmp undo
         TXS
         STA $C010
         JSR $F3E2
         LDA $C052
         
-                        ; Initial setup
+* initial setup
+
         LDA #0
         STA PLAYER
 

@@ -1,5 +1,5 @@
-        ORG $7B00
-        DSK   ../bin/GUNCODE#067B00
+        ORG $7000
+        DSK   ../bin/GUNCODE#067000
         TYP   $06  ; /BIN file
 
         PUT COMMON.S
@@ -209,7 +209,7 @@ HANDLEIT
         TAY
         LDA BOARDBASE,Y
         AND #$7F
-        CMP #$1F
+        CMP #$1F          ; the non-drawn $1F is interpreted as $1E
         BLT :okblk
         LDA #$1E
 :okblk  STA PIECE

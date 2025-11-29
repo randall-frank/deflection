@@ -34,13 +34,7 @@ with open(os.path.join("src","VERSION.S"), "w") as out:
     out.write(text)
 
 
-files = {
-    "START.S": 0x9200,
-    "GUNCODE.S": 0x7B00,
-    "LASER.S": 0x9000,
-    "GAME.S": 0x6000,
-    "LOADER.S": 0x2000,
-}
+files = ["START.S", "GUNCODE.S", "LASER.S", "GAME.S", "LOADER.S"]
 
 log.info("Assembling 6502 source code...")
 
@@ -48,9 +42,9 @@ log.info("Assembling 6502 source code...")
 # Merlin does not handle subdirs very well...
 orig_dir = os.getcwd()
 os.chdir("src")
-for name, address in files.items():
+for name in files:
     cmd = [os.path.join("..", assembler), os.path.join("..", assembler_libdir), name]
-    log.info(f"Assembling: {name} @ ${address:X}")
+    log.info(f"Assembling: {name}")
     result = subprocess.run(cmd, capture_output=True, text=True)
     if '[Error]' in result.stdout:
         result.returncode = 1

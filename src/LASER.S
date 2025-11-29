@@ -26,7 +26,7 @@ BASE = $26
 LOCAL_COLORFLAG DFB 0       ; was $90FC
 
 * TODO: document LASER:
-* XLOC,YLOC,OPT,SYS, ?NUM1,NUM2?
+* XLOC,YLOC,OPT,SYS,NUM1,NUM2 (base and mask icon numbers)
 
 LOCAL_LASER
         LDA YLOC
@@ -36,7 +36,7 @@ LOCAL_LASER
         LDA SYS
         CMP #$1
         BNE NONEED
-        LDA XSTART
+        LDA XSTART        ; x3 by x4 - 1
         ASL
         ASL
         SEC
@@ -46,26 +46,26 @@ LOCAL_LASER
         LDX YSTART
 L1      BEQ L2
         CLC
-        ADC #19
+        ADC #ICON_DY      ; 19 scanlines/icon 
         DEX
         JMP L1
 L2      STA YSTART
-NONEED  LDA #0
+NONEED  LDA #0            ; compute the base pointers (PTR1 and PTR2)
         STA PTR1
         STA PTR2
-        LDA NUM1
-        LSR
-        ROR PTR1
-        LSR
-        ROR PTR1
-        ORA #$80
+        LDA NUM1          ; NUM1 -> PTR1
+        LSR               ; Start w/shape number as high byte of 16 bit #
+        ROR PTR1          ; divide the number by 8 (2 shifts)
+        LSR               ; shifting bits into the low order byte
+        ROR PTR1          ; PTR = ICONBASE | (256*NUM)/4 = ICONBASE | 64*NUM
+        ORA #>ICONBASE    ; High order byte of ICONBASE
         STA PTR1+1
-        LDA NUM2
+        LDA NUM2          ; NUM2 -> PTR2
         LSR
         ROR PTR2
         LSR
         ROR PTR2
-        ORA #$80
+        ORA #>ICONBASE
         STA PTR2+1
         LDA #0
         STA COUNT
@@ -81,7 +81,8 @@ L3      LDX YSTART
         DEC TEMP0
         BNE L3
         RTS
-LINE    LDA #3
+
+LINE    LDA #ICON_XBYTES   ; one scanline of an icon
         STA TEMP1
         LDA XSTART
         STA HOLDER
@@ -125,6 +126,10 @@ TEMP1   DFB 0
         HEX 010004000600    ; Shape table for a single pixel?
         DS 6
 
+* This function is used by the ICONEDIT.BAS file to read
+* the icon from the upper left corner of the SCREEN and
+* store it in a specific slot.  It is not used in-game.
+
 LOCAL_CUT     
         LDA NUM1
         LDY #0
@@ -158,6 +163,8 @@ LL1     INY
         BNE LL2
         RTS
 
+* Redraw the board entirely
+
 LOCAL_DSCREEN 
         LDA #0
         STA XLOC
@@ -173,7 +180,7 @@ PAG2    DEY
 PAG3    CLC
         ADC XLOC
         TAX
-        LDA $9200,X
+        LDA BOARDBASE,X
         STA 2
         BNE DIFF
         LDA #1
@@ -216,7 +223,7 @@ DIGG    LDA #1
         AND #$7F
         STA 2
 DIFF2   LDA 2
-        CMP #$1F
+        CMP #$1F          ; Note: skip drawing see below
         BEQ :nodraw
         JSR LASER
 :nodraw INC XLOC
@@ -227,7 +234,22 @@ DIFF2   LDA 2
         STA XLOC
         INC YLOC
         LDA YLOC
+        CMP #1            ; if finished with row 1, redraw title
+        BEQ :title
+        LDY #4            ; Draw title
+        LDX #6
+        LDA #DS_deflection
+        JSR DRAWSTRING
+:title  LDA YLOC
         CMP #10
         BGE :done
         JMP PAG1
-:done   RTS
+:done   
+* Not happy with the flickering this adds to the title/Copyright
+* but it fixes the issue where a ray draws into boarder tiles
+* and does not get erased...
+        LDY #22*8-2     ; Copyright stuff
+        LDX #7
+        LDA #DS_copyright
+        JSR DRAWSTRING
+        RTS
