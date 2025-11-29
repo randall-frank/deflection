@@ -25,7 +25,7 @@ if not prerequisites:
 
 # Set the version number and start the build process
 # Must be 5 characters
-version = "1.0.0"
+version = "1.0.1"
 
 # Burn the version number into the source file VERSION.S 
 log.info("Generating 6502 source code...")
