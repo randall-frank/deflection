@@ -38,7 +38,7 @@ Details
 -------
 The game is written entirely in Merlin 6502 assembly.
 
-There is a build script in this repo that is capable of generating a .2mg file 
+There is a build script in this repo that is capable of generating a .po file 
 from the sources.  It requires several tools to be installed:
 
 - Python
@@ -48,7 +48,7 @@ from the sources.  It requires several tools to be installed:
 If one places the CiderPress CLI in a subdirectory named 'ciderpress' (ciderpress/cp2.exe)
 and places the Merlin package in a subdirectory named 'merlin32' 
 (merlin32\\Windows\\Merlin32.exe), then the following commands will build
-the `deflection.2mg` file:
+the `Deflection_Release.po` file:
 
 .. code::
 
@@ -137,8 +137,8 @@ Game play continues back and forth until all of the block pieces have be destroy
 for a player.  Note, it is very possible for a player to destroy their own pieces
 and therefore one can explicitly lose the game themselves.
 
-Normally, one would download the `.2mg` file and use it with an emulator or 
-burn a 3.5" disk with the image.  Thanks to the great work by Chris Torrence
+Normally, one would download the `.po` file and use it with an emulator or 
+burn a 5.25" disk with the image.  Thanks to the great work by Chris Torrence
 and Michael Morrison on the `Apple2TS <https://github.com/ct6502/apple2ts>`_ browser 
 hosted Apple II emulator, one can play the game via a web browser.  
 
