@@ -8,6 +8,7 @@ bin/OLDFONT*
 bin/LOADER*
 bin/_*
 /*.2mg
+/*.po
 .vscode/
 SYSTEM/DEFLECT.SYSTEM*
 src/VERSION.S

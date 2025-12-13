@@ -137,6 +137,12 @@ Game play continues back and forth until all of the block pieces have be destroy
 for a player.  Note, it is very possible for a player to destroy their own pieces
 and therefore one can explicitly lose the game themselves.
 
+Normally, one would download the `.2mg` file and use it with an emulator or 
+burn a 3.5" disk with the image.  Thanks to the great work by Chris Torrence
+and Michael Morrison on the `Apple2TS <https://github.com/ct6502/apple2ts>`_ browser 
+hosted Apple II emulator, one can play the game via a web browser.  
+
+`Play Deflection in a browser <https://apple2ts.com/?appmode=game&theme=dark#https://github.com/randall-frank/deflection/releases/download/v1.1.0/Deflection_Release.po>`_
 
 Please feel free to post issues and other questions at `Deflection Issues
 <https://github.com/randall-frank/deflection/issues>`_. This is the best place
