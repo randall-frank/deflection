@@ -10,5 +10,8 @@ bin/_*
 /*.2mg
 /*.po
 .vscode/
+.idea/
 SYSTEM/DEFLECT.SYSTEM*
 src/VERSION.S
+docs/notes.txt
+
