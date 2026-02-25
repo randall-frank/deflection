@@ -1,6 +1,7 @@
 import copy
 import random
 import sys
+import time
 from enum import IntEnum
 from typing import Tuple, Any
 
@@ -61,7 +62,7 @@ def delta(direction: int) -> Tuple[int, int]:
         (-1, -1)   # NW
     ]
     if direction == Direction.DD:
-        return 0, 0
+        return (0, 0)
     idx = direction % 8
     return _deltas[idx]
 
@@ -292,7 +293,7 @@ class Board:
                 break
         if piece == Piece.ILLEGAL:
             raise RuntimeError(f"Player {player} does not have a laser piece on the board!")
-        print(f"Firing laser {loc} {piece} for player {player}...")
+        # print(f"Firing laser {loc} {piece} for player {player}...")
         laser_dirs = {Piece.LASER_NE: Direction.NE, Piece.LASER_E: Direction.E, Piece.LASER_SE: Direction.SE,
                       Piece.LASER_NW: Direction.NW, Piece.LASER_W: Direction.W, Piece.LASER_SW: Direction.SW}
         direction = laser_dirs.get(piece, None)
@@ -300,46 +301,43 @@ class Board:
             raise RuntimeError(f"Invalid laser piece for player {player}: {piece}")
         laser = [[loc, direction]]
         while len(laser) > 0:
+            # print("Processing laser list: ", laser)
             # Walk a copy of the laser list since we will be modifying the original laser list while iterating.
             tmp = copy.deepcopy(laser)
             laser = []
-            # step = [loc, direction]
+            # Each step is a list in the form: [loc, direction]
             for step in tmp:
-                print("Processing laser step: ", step)
+                # print("Processing laser step: ", step, tmp)
                 # New location is current location + delta of direction.
-                loc = step[0]
-                direction = step[1]
-                loc[0] += delta(direction)[0]
-                loc[1] += delta(direction)[1]
-                print("New laser location: ", loc)
+                loc = [step[0][0] + delta(step[1])[0], step[0][1] + delta(step[1])[1]]
+                direction = copy.deepcopy(step[1])
                 # Question: if two laser paths hit the same piece at the same time, do they both interact
                 # with the piece before it is destroyed/reflected/split?
                 # if we move off the core board, then stop that laser path.
-                if loc[0] in (0, 9) or loc[1] in (0, 9):
+                if loc[0] <= 0 or loc[0] >= 9 or loc[1] <= 0 or loc[1] >= 9:
                     # Stop laser path if we hit the edge of the board
+                    # print("Removing laser path since we hit the edge of the board.", loc, direction)
                     continue
                 piece, p = self.get_piece(loc[0], loc[1])
-                print("New laser location: ", loc, " piece: ", piece, " player: ", p)
+                # print("New laser location: ", loc, " piece: ", piece, " from: ", direction)
                 # If the piece is empty, then continue moving in the same direction.
                 if piece == Piece.EMPTY:
                     # continue moving in the same direction
                     laser.append([loc, direction])
-                    continue
-                # If the piece is a target, then destroy the target
-                elif piece == Piece.TARGET:
-                    # destroy the target and stop that laser path
-                    self._pieces[loc[0]][loc[1]] = (Piece.EMPTY, 0)
+                    # print("Continuing laser path since we hit an empty space.", loc, direction)
                     continue
                 else:
                     # redirect the ray according to the piece type and continue.
                     new_dir = self._redirect_ray(piece, direction)
-                    print("Redirection ", piece, " result: ", new_dir)
+                    # print("Redirection ", piece, " from:", direction, " result: ", new_dir)
                     if new_dir != (Direction.DD,):
                         # If the new direction is valid, then add the new location and direction
                         # to the laser list to continue processing.
                         for d in new_dir:
                             laser.append([loc, d])
+                            # print("Added: ", loc, d, " to laser list:", laser)
                     else:
+                        # print("Destroying piece at ", loc, " and stopping laser path.")
                         # piece is destroyed, remove the piece from the board and stop that laser path.
                         self._pieces[loc[0]][loc[1]] = (Piece.EMPTY, 0)
                         # ray is destroyed, so do not add to laser list.
@@ -493,10 +491,12 @@ class Board:
                     score -= v
         return score
 
-    def suggest_move(self, player: int) -> Tuple[Tuple[int, int], Tuple[int, int], Rotate, int]:
+    def suggest_move(self, player: int, depth: int, max_depth: int) -> \
+            [Tuple[int, int], Tuple[int, int], Rotate, int]:
         # simple move suggestion that tries all legal moves and returns the one with the highest score after the move.
         best_score = sys.maxsize * -1
         best_move = None
+        count = 0
         # try moving each piece for the player in the core board to each legal target location
         # and rotating it in each possible way, then score the resulting position and keep track of the best one.
         for x in range(1,9):
@@ -528,15 +528,23 @@ class Board:
                             try:
                                 self.move((x,y), (tx,ty), player, rotate)
                                 score = self.score_position(player)
+                                count += 1
+                                if depth < max_depth:
+                                    # recursively call suggest_move for the opponent to see how they would
+                                    # respond to this move, and subtract their best score from our score to
+                                    # get a more accurate evaluation of the move.
+                                    # ((x,y), (tx,ty), rotate, best_score)
+                                    turn = self.suggest_move(3-player, depth+1, max_depth)
+                                    score -= turn[3]
                                 if score > best_score:
                                     best_score = score
-                                    best_move = ((x,y), (tx,ty), rotate, best_score)
+                                    best_move = ((x,y), (tx,ty), rotate, best_score, count)
                                 elif score == best_score:
                                     # if the score is the same as the best score, then we can randomly
                                     # choose to update the best move or not to add some variability to
                                     # the suggestions.
                                     if random.random() < 0.5:
-                                        best_move = ((x,y), (tx,ty), rotate, best_score)
+                                        best_move = ((x,y), (tx,ty), rotate, best_score, count)
                             except RuntimeError:
                                 # if the move is invalid for some reason (shouldn't happen since we
                                 # check legality), then skip it.
@@ -570,15 +578,12 @@ class Board:
                     self._pieces[col][y] = (new_piece, player)  # set the laser piece in the new position
                     self.fire_laser(player)  # fire the laser from the new position
                     score = self.score_position(player)
+                    count += 1
                     if score > best_score:
                         best_score = score
-                        best_move = ((col, orig_pos), (col, y), new_piece - Piece.LASER_NE, best_score)
-                    elif score == best_score:
-                        # if the score is the same as the best score, then we can randomly
-                        # choose to update the best move or not to add some variability to
-                        # the suggestions.
-                        if random.random() < 0.5:
-                            best_move = ((col, orig_pos), (col, y), new_piece - Piece.LASER_NE, best_score)
+                        best_move = ((col, orig_pos), (col, y), new_piece - Piece.LASER_NE, best_score, count)
+                    # if there is no change in score, do not try to fire from the new position since it is unlikely to
+                    # be a good move.
                 except RuntimeError:
                     continue
                 finally:
@@ -665,8 +670,10 @@ if __name__ == "__main__":
         src = []
         tgt = []
         while True:
-            #suggest = board.suggest_move(player)
-            #print(f"Suggested move for player {player}: {suggest}")
+            #t0 = time.time()
+            #suggest = board.suggest_move(player,1,2)
+            #t1 = time.time()
+            #print(f"Suggested move for player {player}: {suggest} (computed in {t1-t0:.2f} seconds)")
             s1 = board.print_player(f'Player {player}', player)
             print(f"{s1}: select a piece to move: x, y ([0,9],[0,9])")
             try:
