@@ -533,9 +533,10 @@ class Board:
                                     # recursively call suggest_move for the opponent to see how they would
                                     # respond to this move, and subtract their best score from our score to
                                     # get a more accurate evaluation of the move.
-                                    # ((x,y), (tx,ty), rotate, best_score)
+                                    # ((x,y), (tx,ty), rotate, best_score, count)
                                     turn = self.suggest_move(3-player, depth+1, max_depth)
                                     score -= turn[3]
+                                    count += turn[4]
                                 if score > best_score:
                                     best_score = score
                                     best_move = ((x,y), (tx,ty), rotate, best_score, count)
