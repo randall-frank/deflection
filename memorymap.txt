@@ -13,6 +13,7 @@ LASER.SHAPES - @ 8000 - game icons ($fff bytes)
 (3C00 offset and full length of 3B00)
 
 2000 - HGR screen
+4300 - Directory I/O functions and buffers (through 5FFF)
 6000 - GAME (GAME.S)
 6C00 - FONT binary ($400 bytes)
 7000 - GUNCODE - AKA 'RAY'

@@ -1,17 +1,91 @@
+import argparse
+import glob
+import platform
 import logging
 import shutil
 import subprocess
 import sys
 import os
-
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("build")
+import urllib.request
+import zipfile
 
 # Note: these paths are for local Windows installs.  All of these tools
 # can be installed under Linux as well, but these paths will need to change.
-assembler = ".\\merlin32\\windows\\merlin32.exe"
-assembler_libdir = ".\\merlin32\\library\\"
+plat = platform.system()
+assembler = ".\\merlin\\Merlin32_v1.2_b2\\windows\\merlin32.exe"
+assembler_libdir = ".\\merlin\\Merlin32_v1.2_b2\\library\\"
 ciderpresscli = ".\\ciderpress\\cp2.exe"
+
+
+def merlin_check(app, libdir, cpapp):
+    # If merlin is present, do nothing
+    if not os.path.exists("merlin"):
+        # pull a version from the web
+        url="https://brutaldeluxe.fr/products/crossdevtools/merlin/Merlin32_v1.2.zip"
+        try:
+            log.info(f"Attempting to pull merlin32 from: {url}")
+            _ = urllib.request.urlretrieve(url, "merlin.zip")
+        except Exception as e:
+            log.warning(f"Download failed: {e}")
+            return app, libdir, cpapp
+        # unpack
+        try:
+            os.makedirs("merlin")
+            with zipfile.ZipFile("merlin.zip", "r") as zf:
+                zf.extractall("merlin")
+            os.unlink("merlin.zip")
+        except Exception as e:
+            log.warning(f"Unable to unpack Merlin32: {e}")
+    if not os.path.exists("ciderpress"):
+        url = "https://github.com/fadden/CiderPress2/releases/download/v1.1.1/cp2_1.1.1_win-x86_sc.zip"
+        try:
+            log.info(f"Attempting to pull ciderpress from: {url}")
+            _ = urllib.request.urlretrieve(url, "ciderpress.zip")
+        except Exception as e:
+            log.warning(f"Download failed: {e}")
+            return app, libdir, cpapp
+        # unpack
+        try:
+            os.makedirs("ciderpress")
+            with zipfile.ZipFile("ciderpress.zip", "r") as zf:
+                zf.extractall("ciderpress")
+            os.unlink("ciderpress.zip")
+        except Exception as e:
+            log.warning(f"Unable to unpack ciderpress: {e}")
+    # generate the name of the assembler and the library directory
+    prefix = glob.glob("merlin/*")[0]
+    app = os.path.join(prefix, plat, "merlin32")
+    if plat.startswith("Win"):
+        app += ".exe"
+    libdir = os.path.join(prefix, "library")
+    log.info(f"Using Merlin32: {app} {libdir}")
+    cpapp = os.path.join("ciderpress", "cp2")
+    if plat.startswith("Win"):
+        cpapp += ".exe"
+    log.info(f"Using CiderPress2: {cpapp}")
+    return app, libdir, cpapp
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--verbose", action="store_true", default=False, help="Run in verbose mode")
+parser.add_argument("--logfile", help="Log file for verbose output", default="")
+parser.add_argument("--debug", action="store_true", default=False, help="Include BASIC.SYSTEM")
+parser.add_argument("--symbols", action="store_true", default=False, help="Save assembler symbol files")
+args = parser.parse_args()
+
+mode = "release"
+if args.debug:
+    mode = "debug"
+    
+# Set up logging
+level = logging.INFO
+if args.verbose:
+    level = logging.DEBUG
+    
+log = logging.getLogger("build")
+logging.basicConfig(filename=args.logfile, level=level)
+
+assembler, assembler_libdir, ciderpresscli = merlin_check(assembler, assembler_libdir, ciderpresscli)
 
 # Check for all the tools to be present
 prerequisites = True
@@ -25,7 +99,7 @@ if not prerequisites:
 
 # Set the version number and start the build process
 # Must be 5 characters
-version = "1.1.0"
+version = "1.1.1"
 
 # Burn the version number into the source file VERSION.S 
 log.info("Generating 6502 source code...")
@@ -34,7 +108,7 @@ with open(os.path.join("src","VERSION.S"), "w") as out:
     out.write(text)
 
 
-files = ["START.S", "GUNCODE.S", "LASER.S", "GAME.S", "LOADER.S"]
+files = ["START.S", "GUNCODE.S", "LASER.S", "GAME.S", "DIRROUTS.S", "LOADER.S"]  
 
 log.info("Assembling 6502 source code...")
 
@@ -43,7 +117,10 @@ log.info("Assembling 6502 source code...")
 orig_dir = os.getcwd()
 os.chdir("src")
 for name in files:
-    cmd = [os.path.join("..", assembler), os.path.join("..", assembler_libdir), name]
+    cmd = [os.path.join("..", assembler)]
+    if args.symbols:
+        cmd.append("-v")
+    cmd.extend([os.path.join("..", assembler_libdir), name])
     log.info(f"Assembling: {name}")
     result = subprocess.run(cmd, capture_output=True, text=True)
     if '[Error]' in result.stdout:
@@ -55,8 +132,8 @@ os.chdir(orig_dir)
 
 log.info("Building DEFLECT.SYSTEM(SYS#ff) file...")
 # Build 'DEFLECT.SYSTEM,TSYS' from bins
-# Currently 3B00 bytes long
-data = bytearray(0x3b00)
+# Currently 3B00+0700 bytes long
+data = bytearray(0x3b00+0x0700)
 
 for raw in os.listdir("bin"):
     if raw.startswith("_"):
@@ -70,6 +147,8 @@ for raw in os.listdir("bin"):
     addr = int(raw.split("#")[1][2:],16)
     if name.startswith("LOADER"):
         offset = 0
+    elif name.startswith("DIRROUTS"):
+        offset = addr - (0x4300 - 0x5b00) - 0x2000
     else:
         offset = addr - (0x6000 - 0x2400) - 0x2000
     log.info(f"Loading {name} at ${addr:04X} (${offset:04X})")
@@ -107,25 +186,30 @@ cmd = [ciderpresscli, "add", "--strip-paths", rel_filename, "SYSTEM"]
 result = subprocess.run(cmd, capture_output=True, text=True, check=True)
 log.info(f"System files added to disk image: {result.stdout} {result.stderr}")
 
-for name in os.listdir("basic"):
-    if name.upper().endswith(".ABAS"):
-        root = os.path.splitext(name)[0]
-        try:
+if mode == "debug":
+    for name in os.listdir("basic"):
+        if name.upper().endswith(".ABAS"):
+            root = os.path.splitext(name)[0]
+            try:
+                os.remove(os.path.join("basic", root))
+            except Exception:
+                pass
+            # make a temp copy to rename the file so the import is clean
+            shutil.copy(os.path.join("basic", name), os.path.join("basic", root))
+            cmd = [ciderpresscli, "import", "--strip-paths", rel_filename, "bas",  f"basic/{root}"]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             os.remove(os.path.join("basic", root))
-        except Exception:
-            pass
-        # make a temp copy to rename the file so the import is clean
-        shutil.copy(os.path.join("basic", name), os.path.join("basic", root))
-        cmd = [ciderpresscli, "import", "--strip-paths", rel_filename, "bas",  f"basic/{root}"]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        os.remove(os.path.join("basic", root))
-        log.info(f"Imported: basic/{name} as {root}")
+            log.info(f"Imported: basic/{name} as {root}")
 
-for name in os.listdir("bin"):
-    if not name.startswith("_"):
-        cmd = [ciderpresscli, "add", "--strip-paths", rel_filename, f"bin/{name}"]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        log.info(f"Imported: {name}")
-
+    for name in os.listdir("bin"):
+        if not name.startswith("_"):
+            cmd = [ciderpresscli, "add", "--strip-paths", rel_filename, f"bin/{name}"]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            log.info(f"Imported: {name}")
+else:
+    cmd = [ciderpresscli, "rm", rel_filename, "BASIC.SYSTEM"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    log.info(f"System files added to disk image: {result.stdout} {result.stderr}")
+    
 log.info(f"Build v{version} complete.")
  

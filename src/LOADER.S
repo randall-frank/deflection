@@ -21,6 +21,14 @@ TGTHI    =     3
         STA   SRCLO
         STA   TGTLO
 
+* Read from 5B00-5B00 and store to 4300-4A00         
+        LDA   #$5B
+        STA   SRCHI
+        LDA   #$43
+        STA   TGTHI
+        LDX   #$07
+        * JSR   MOVEMEM
+
 * Read from 2400-5B00 and store to 6000-9700         
         LDA   #$24
         STA   SRCHI
