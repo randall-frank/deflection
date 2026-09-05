@@ -8,14 +8,14 @@ LASER.SHAPES - @ 8000 - game icons ($fff bytes)
 //ANCHOR[id=loader] - packed DEFLECT.SYSTEM file layout
 --------- DIAFLW.SYSTEM -----
 2000 - Unpack the game bits into their runtime locations & start it
-    Reads from 2400-5B00 and stores to 6000-9700  (3700 bytes)
+    Reads from 2100-5F00 and stores to 6000-9E00  (3E00 bytes)
     JMP 6000
-(3C00 offset and full length of 3B00)
 
 2000 - HGR screen
-4300 - Directory I/O functions and buffers (through 5FFF)
+4A00 - Directory I/O buffers
+5000 - Buffers for directory names ($1000 bytes)
 6000 - GAME (GAME.S)
-6C00 - FONT binary ($400 bytes)
+6C00 - FONT binary ($0400 bytes)
 7000 - GUNCODE - AKA 'RAY'
 7D00 - STARTSAVE saved (same content as START.S)
 7E00 - DXTBL (100 bytes) - TBLD
@@ -27,4 +27,4 @@ LASER.SHAPES - @ 8000 - game icons ($fff bytes)
 9300 - DIRBASE - from GFXTABLES
 9400 - LOWS - table of HGR scanline Y starts LO
 9500 - HIGHS - table of HGR scanline Y starts HI
-
+9600 - Directory I/O functions (~$0700)

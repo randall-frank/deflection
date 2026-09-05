@@ -147,10 +147,8 @@ for raw in os.listdir("bin"):
     addr = int(raw.split("#")[1][2:],16)
     if name.startswith("LOADER"):
         offset = 0
-    elif name.startswith("DIRROUTS"):
-        offset = addr - (0x4300 - 0x5b00) - 0x2000
     else:
-        offset = addr - (0x6000 - 0x2400) - 0x2000
+        offset = addr - (0x6000 - 0x2100) - 0x2000
     log.info(f"Loading {name} at ${addr:04X} (${offset:04X})")
     with open(os.path.join("bin", raw), "rb") as f:
         local = bytearray(f.read())
@@ -161,7 +159,6 @@ outname = os.path.join("SYSTEM","DEFLECT.SYSTEM#ff2000")
 with open(outname, "wb") as fp:
     fp.write(data)
 log.info(f"Wrote system file: {outname}")
-
 
 log.info("Building .po disk image...")
 # Create a release .po image

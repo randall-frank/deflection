@@ -6,6 +6,7 @@ bin/GUNCODE*
 bin/LASER.DRAW*
 bin/OLDFONT*
 bin/LOADER*
+bin/DIRROUTS*
 bin/_*
 /*.2mg
 /*.po

@@ -1,5 +1,5 @@
-         ORG   $4300
-         DSK   ../bin/DIRROUTS#064300
+         ORG   $9600
+         DSK   ../bin/DIRROUTS#069600
          TYP   $06        ; /BIN file
 
 * This file is designed to be included into another source file
