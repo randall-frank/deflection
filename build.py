@@ -152,6 +152,8 @@ for raw in os.listdir("bin"):
     log.info(f"Loading {name} at ${addr:04X} (${offset:04X})")
     with open(os.path.join("bin", raw), "rb") as f:
         local = bytearray(f.read())
+    if name.startswith("GFX"):
+        local = local[0:768]
     length = len(local)
     data[offset:offset+length] = local
 

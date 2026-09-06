@@ -348,9 +348,18 @@ CHECK_KEYS
         LDA #0
         STA THEKEY
         LDA $C000
-        BMI :need
+        BMI :load
         RTS
-:need   CMP #$81    ; ^A - abort game entirely
+
+:load   CMP #$CC    ; L - load file
+        BNE :save
+        JMP DOLOAD
+
+:save   CMP #$D3    ; S - save file
+        BNE :abort
+        JMP DOSAVE
+
+:abort  CMP #$81    ; ^A - abort game entirely
         BNE :snd
         STA $C010
         PLA  ; fix the stack
@@ -358,6 +367,7 @@ CHECK_KEYS
         PLA
         PLA
         JMP GAME1 
+
 :snd    CMP #$93    ; ^S - toggle sound
         BNE :color
         LDA SOUNDON
@@ -365,6 +375,7 @@ CHECK_KEYS
         STA SOUNDON
         STA $C010
         RTS
+
 :color  CMP #$83    ; ^C - toggle color mode
         BNE :done
         LDA COLORFLAG
@@ -374,6 +385,7 @@ CHECK_KEYS
         LDA #KEY_redraw
         STA THEKEY
         RTS
+
 :done   CMP #$91     ; ^Q - ProDOS BYE
         BEQ :bye
         CMP #$9B           ; ESC key
@@ -382,6 +394,7 @@ CHECK_KEYS
         LDA #KEY_undo
         STA THEKEY
         RTS
+
 :space  CMP #$A0          ; space key
         BNE :arrows
         LDA #KEY_sel    
@@ -422,7 +435,42 @@ MKEYS   HEX   EDCD8A
 JKEYS   HEX   EACA88
 KKEYS   HEX   EBCB95
 
-* The processed keystrroke (if any) 0=no keypress
+
+DOLOAD
+        LDA    #0
+        STA    IO_ACTION
+        STA    IO_FILENAME
+        JSR    GETPUTPATH
+        LDA    IO_ACTION
+        CMP    #IO_CANCEL
+        BEQ    :canceled
+* TODO
+:canceled        
+        RTS
+
+DOSAVE
+        LDA    #1
+        STA    IO_ACTION
+        LDY    #0
+:loop   LDA    DEFFILENAME,Y
+        STA    IO_FILENAME,Y
+        INY
+        CMP    #0
+        BNE    :loop
+        JSR    GETPUTPATH
+        LDA    IO_ACTION
+        CMP    #IO_CANCEL
+        BEQ    :canceled
+* TODO
+:canceled        
+        RTS
+
+DEFFILENAME
+        DFB    13
+        ASC    "SAVEGAME.DFLN"
+        HEX    00
+
+* The processed keystroke (if any) 0=no keypress
 
 THEKEY  DFB 0
 

@@ -7,7 +7,7 @@ LO          = $9400  ; HGR1 scanline low order addresses
 DIRBASE     = $9300
 
 * Font ($400 bytes)
-FONTBASE    = $6800
+FONTBASE    = $6C00
 
 * Tables from TBLD
 DXTBL       = $7E00
@@ -97,3 +97,33 @@ DS_help         = 14
 * placement vertically of user info boxes
 Y_player1       = 24
 Y_player2       = 80
+
+
+* Directory routine 
+* $280: proposed filename length (0) is none
+* $281: proposed filename (up to 15 chars)
+* $290: 1=save file, 0=read file
+* Directory prefix is the starting point
+
+* On return:
+*
+* $280: filename length
+* $281: filename (up to 15 chars)
+* $290: status 0=ok, 1=cancel
+* Directory prefix will have been set on ok
+
+GETPUTPATH  =  $9600
+
+IO_FILENAME =  $280
+IO_ACTION   =  $290
+IO_STATUS   =  $290
+
+* Options:
+IO_LOAD     =  0
+IO_SAVE     =  1
+
+* Return status
+IO_OK       =  0
+IO_CANCEL   =  1
+
+

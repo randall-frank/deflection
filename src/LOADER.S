@@ -28,7 +28,7 @@ TGTHI    =     3
         STA   TGTHI
         LDX   #$3E
         JSR   MOVEMEM
-
+        
 * Start the game                           
         JMP   $6000
 

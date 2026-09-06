@@ -15,4 +15,4 @@ bin/_*
 SYSTEM/DEFLECT.SYSTEM*
 src/VERSION.S
 docs/notes.txt
-
+src/*_S*.txt

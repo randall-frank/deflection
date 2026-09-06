@@ -7,16 +7,15 @@
 * The prefix is set properly on return and any selected filename
 * can be found at $0280...
 
-
-COUT     =     $FDED      ; Output character in accumulator
-VTAB     =     $FBDD      ; Vertical tab routine [1,24] in accumulator
-HTAB     =     $FB5A      ; Horizontal tab routine [1,40] in accumulator
 HOME     =     $FC58      ; Clear screen, move cursor to 0,0
 MOUSEFNT =     $C00F      ; Enable mouse text font
 
+TEXTMODE =     $C051
+GFXMODE  =     $C050
+
 MLI      =     $BF00
 
-TPTR     =     $26
+TPTR     =     $FC         ; FC,FD
 TMP0     =     0
 TMP1     =     1
 
@@ -67,6 +66,8 @@ PR_MODE_CANCEL =   3
 
 * Interaction logic
 
+         JSR   HOME
+         STA   TEXTMODE
          LDA   RETSTATUS
          STA   PR_SAVE
          LDY   RETLEN
@@ -117,7 +118,8 @@ WORKING
 :cancel  DEY
          DEY
          STY   RETSTATUS
-         RTS
+         JMP   RESTORE
+
 
 :list_mode                  ; handle list manipulation
          CMP   #141       ; return character
@@ -223,7 +225,7 @@ WORKING
          CPY   #15        ; ok to append character?
          BGE   :done2
 
-* legal chars: [A-Z],[0-9],'.'
+* legal chars: [A-Z],[a,z],[0-9],'.'
          AND   #$7F
          CMP   #$2E       ; '.'
          BEQ   :append
@@ -234,7 +236,12 @@ WORKING
          CMP   #$41       ; 'A'
          BLT   :done
          CMP   #$5B       ; '['
+         BLT   :append
+         CMP   #$61       ; 'a'
+         BLT   :done
+         CMP   #$7B       ; '{'
          BGE   :done
+         AND   #$DF       ; lowercase -> uppercase  $61,$7B
 
 :append  STA   RETNAME,Y
          INY
@@ -250,6 +257,10 @@ WORKING
 :done2   JSR   DRAWNAME
          JMP   WORKING
 
+RESTORE
+         STA   GFXMODE
+         RTS
+
 PR_XPOS  DFB   0
 PR_YPOS  DFB   0
 PR_XROOT DFB   0
@@ -259,6 +270,7 @@ PR_MASK  DFB   0
 PR_NAMECOUNT DFB   0
 PR_NAMETOP DFB   0
 PR_MODE  DFB   PR_MODE_LIST
+PR_ORIG_DISP_MODE DFB 0
 
 PR_INIT  STA   MOUSEFNT
          LDA   #40
@@ -373,7 +385,7 @@ DRAWSCREEN
          JSR   DRAWPREFIX
          JSR   DRAWFILES
          JSR   DRAWNAME
-         LDX   #8
+         LDX   #5
          LDY   #23
          JSR   PR_SET_POS
          LDY   #>TABTXT
@@ -571,10 +583,10 @@ READFILES
 :readdir JMP   DOCATALOG
 
 LOADTITLE
-         ASC   "Select the file to load"
+         ASC   "Select Deflection state file to load"
          HEX   00
 SAVETITLE
-         ASC   "Select the file to save"
+         ASC   "Select file to save Deflection state"
          HEX   00
 
 PREFIXTXT
@@ -584,7 +596,7 @@ PREFIXTXT
 FILELISTTXT
          ASC   "Files ("
          HEX   4D
-         ASC   "=down/sel,esc=up,"
+         ASC   "=select,esc=up,"
          HEX   484A554B
          ASC   "=pick):"
          HEX   00
@@ -602,7 +614,9 @@ CANCELTXT
          HEX   00
 
 TABTXT
-         ASC   "(tab=change input focus)"
+         ASC   "(tab=change focus,"
+         HEX   4D
+         ASC   "=select)"
          HEX   00
 
 SETPREFIX
@@ -758,3 +772,51 @@ CFILE    JSR   MLI        ; close the file
          DA    CPDOS
          RTS
 CPDOS    HEX   0101
+
+
+* Unused at the moment, but it allows for HGR display
+
+* FONT is at 6C00 we need to multiply char by 8
+* and add to 6C00.  Divide 6C00 by 8 to get 0D80
+* so we OR 0D80 with the char and shift the addr
+
+DS_TMPY  dfb   0
+DS_CNT   dfb   0
+GFX_HI_TABLE = $9500  ; HGR1 scanline high order addresses
+GFX_LO_TABLE = $9400  ; HGR1 scanline low order addresses
+GFX_LO   =     $FA
+GFX_HI   =     $FB
+
+DRAWCHAR 
+        ORA #$80
+        STA FNTBYTE+1
+        LDA #$0D    ; high order byte of FONTBASE shifted right 3 bits
+        STA FNTBYTE+2
+
+        ASL FNTBYTE+1 ; multiply 16 bit font address by 8
+        ROL FNTBYTE+2
+        ASL FNTBYTE+1
+        ROL FNTBYTE+2
+        ASL FNTBYTE+1
+        ROL FNTBYTE+2  
+
+        LDX PR_YPOS    ; reset the Y address
+        STX DS_TMPY
+        LDA #8
+        STA DS_CNT  ; how many bytes to render
+
+NEXTY   LDX DS_TMPY
+        LDA GFX_LO_TABLE,X    
+        STA GFX_LO
+        LDA GFX_HI_TABLE,X
+        STA GFX_HI
+FNTBYTE LDA $FFFF
+        INC FNTBYTE+1
+        BNE SKIPHI
+        INC FNTBYTE+2
+SKIPHI  LDY PR_XPOS
+        STA (GFX_LO),Y
+        INC DS_TMPY ; next scanline
+        DEC DS_CNT
+        BNE NEXTY
+        RTS
