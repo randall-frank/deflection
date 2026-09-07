@@ -22,9 +22,15 @@ LASER.SHAPES - @ 8000 - game icons ($fff bytes)
 7F00 - DYTBL (100 bytes) - TBLD
 8000 - LASER.SHAPES - icons (editor with ICONEDIT.abas)
 9000 - LASER.DRAW - icon drawing code (LASER.S)
-9200 - BOARDBASE current play board from START.S
+9200 - BOARDBASE current play board from START.S (10x10 grid)
 9280 - BOARDSAVE saved board...
 9300 - DIRBASE - from GFXTABLES
 9400 - LOWS - table of HGR scanline Y starts LO
 9500 - HIGHS - table of HGR scanline Y starts HI
 9600 - Directory I/O functions (~$0700)
+
+
+Save file format:
+
+44464CXX    DFLx where x is the value of PLAYER
+100bytes    10x10 game state

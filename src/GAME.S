@@ -152,7 +152,7 @@ S2      LDA STARTSAVE,Y
         LDA #DS_copyright
         JSR DRAWSTRING
         
-        LDY #17*8         ; help text
+        LDY #Y_help         ; help text
         LDX #30
         LDA #DS_help
         JSR DRAWSTRING
@@ -422,6 +422,7 @@ CHECK_KEYS
 :akey   STA THEKEY
         STA $C010
         RTS
+
 :bye    JSR   $BF00
         HEX   65
         DA    BYEMLI
@@ -443,10 +444,41 @@ DOLOAD
         JSR    GETPUTPATH
         LDA    IO_ACTION
         CMP    #IO_CANCEL
-        BEQ    :canceled
-* TODO
-:canceled        
+        BEQ    IOERR
+        JSR    OPENFILE
+        BCS    IOERR
+        LDA    OPREF
+        STA    RDREF
+        STA    CLREF
+        LDA    #4         ; read the header
+        STA    RDLEN
+        LDA    #>TMPBUFFER
+        STA    RDADDR+1
+        JSR    READFILE 
+        BCS    IOERRC
+        LDY    #2
+:more   LDA    TMPBUFFER,Y
+        CMP    MAGIC,Y
+        BNE    IOERRC
+        DEY
+        BPL    :more
+        LDA    #100       ; read the board
+        STA    RDLEN
+        LDA    #>BOARDBASE
+        STA    RDADDR+1
+        JSR    READFILE
+        BCS    IOERRC
+        LDA    TMPBUFFER+3
+        STA    PLAYER
+        JSR    DSCREEN    ; refresh display
+        JSR    CHANGESTATE
+        JSR    PLAYERBLOCKS
+        JSR    CLOSEFILE       
         RTS
+
+IOERRC  JSR    CLOSEFILE    ; io error w/close        
+IOERR   LDX    #SOUND_Fail  ; io error no close
+        JMP    PLAYSOUND
 
 DOSAVE
         LDA    #1
@@ -460,10 +492,94 @@ DOSAVE
         JSR    GETPUTPATH
         LDA    IO_ACTION
         CMP    #IO_CANCEL
-        BEQ    :canceled
-* TODO
-:canceled        
+        BEQ    IOERRC
+        LDA    PLAYER
+        STA    MAGICP
+        JSR    CREATEFILE       ; ok to fail
+        JSR    OPENFILE
+        BCS    IOERRC
+        LDA    OPREF
+        STA    WRREF
+        STA    CLREF
+        LDA    #4         ; write the header
+        STA    WRLEN
+        LDA    #>MAGIC
+        STA    WRADDR+1
+        LDA    #<MAGIC
+        STA    WRADDR+0
+        JSR    WRITEFILE
+        BCS    IOERRC
+        LDA    #100         ; write the board
+        STA    WRLEN
+        LDA    #>BOARDBASE
+        STA    WRADDR+1
+        LDA    #<BOARDBASE
+        STA    WRADDR+0
+        JSR    WRITEFILE
+        BCS    IOERRC
+        JSR    CLOSEFILE      
         RTS
+
+CREATEFILE
+        JSR   MLI        
+        HEX   C0
+        DA    CRPAR
+        RTS
+CRPAR   HEX   07
+        DA    IO_FILENAME
+        HEX   C3          ; full access
+        HEX   06          ; BIN
+        DA    $4000       ; A$4000
+        HEX   01
+        DA    0
+        DA    0
+
+OPENFILE
+        JSR   MLI        
+        HEX   C8
+        DA    OPPAR
+        RTS
+OPPAR   HEX   03
+        DA    IO_FILENAME
+        DA    FILEBUFFER
+OPREF   HEX   01
+
+READFILE
+        JSR   MLI        
+        HEX   CA
+        DA    RDPAR
+        RTS
+RDPAR   HEX   04
+RDREF   HEX   01
+RDADDR  DA    0           ; addr
+RDLEN   DA    0           ; length
+        DA    0           ; num done
+
+WRITEFILE
+        JSR   MLI        
+        HEX   CB
+        DA    WRPAR
+        RTS
+WRPAR   HEX   04
+WRREF   HEX   01
+WRADDR  DA    0           ; addr
+WRLEN   DA    0           ; length
+        DA    0           ; num done
+
+CLOSEFILE
+        JSR   MLI        
+        HEX   CC
+        DA    CLPAR
+        RTS
+CLPAR   HEX   01
+CLREF   HEX   01
+
+MAGIC   HEX    44464C     ; DFLx (ascii DFL + PLAYER byte)
+MAGICP  HEX    00
+
+FILEBUFFER =   $4B00
+TMPBUFFER =    $4A00
+MLI      =     $BF00
 
 DEFFILENAME
         DFB    13
@@ -1069,7 +1185,9 @@ DS_S_help
         ASC '^S: Sound', $0A
         ASC '^C: Color', $0A
         ASC '^A: Abort', $0A
-        ASC '^Q: Quit',  $00
+        ASC '^Q: Quit',  $0A
+        ASC 'L: Load',   $0A
+        ASC 'S: Save',   $00
 
 * Sound in the X register [0,15]
 * Routine from:

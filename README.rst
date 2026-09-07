@@ -153,14 +153,15 @@ to post questions and code.
 The game is also hosted on `itch.io <https://myleftgoat.itch.io/deflection>`_ which provides
 a simpler download option and forum to discuss more gameplay related issues.
 
+Releases
+~~~~~~~~
+
+* 1.2.0 - Added Load/Save option
 
 Things To Do
 ~~~~~~~~~~~~
 Currently, there is no provision for a computer player.  It would be nice to
 include a way to play solo.
-
-There is no mechanism to save/load a game during play.  This would be very
-handy, especially while working on the computer player.
 
 Probably more?
 

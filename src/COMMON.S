@@ -95,8 +95,9 @@ DS_unbox        = 13
 DS_help         = 14
 
 * placement vertically of user info boxes
-Y_player1       = 24
-Y_player2       = 80
+Y_player1       = 8
+Y_player2       = 64
+Y_help          = 120
 
 
 * Directory routine 
