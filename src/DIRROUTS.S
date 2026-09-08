@@ -657,8 +657,9 @@ ONLINE   JSR   MLI
          ASL
          TAY
          LDA   TMPBUFFER,Y
-         BEQ   :done
+         BEQ   :done       ; 0 is end of list
          AND   #$0F
+         BEQ   :incidx     ; error reading device, skip it
          STA   TMP1
          LDX   PR_NAMECOUNT
          LDA   #$0F       ; DIR type
@@ -678,7 +679,7 @@ ONLINE   JSR   MLI
          LDA   #0
          STA   NAMELIST,X
          INC   PR_NAMECOUNT
-         INC   TMP0
+:incidx  INC   TMP0
          JMP   :next
 :done    RTS
 DEVICES  DFB   2
